@@ -1,0 +1,26 @@
+# Site settings
+title:          @suanchinyeo
+description:    "Stories and Data"
+url:            "https://suanchinyeo.github.io"
+
+# Author
+author:
+  name:         Suan Chin Yeo
+  url:          https://www.linkedin.com/in/suanchinyeo/
+  email:        chin.yeo@mail.utoronto.ca
+
+# Build settings
+markdown:       kramdown
+
+# Assets
+sass:
+  sass_dir:     _sass
+  style:        compressed
+
+# Gems
+plugins:
+  - jekyll-paginate
+
+# Permalinks
+permalink:      /:year-:month-:day/:title
+paginate:       5
