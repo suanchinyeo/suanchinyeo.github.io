@@ -315,6 +315,6 @@ And we're done!
 
 <center>Footnotes</center>
 
- <b id="f1">1</b> The same principle applies to writing essays, if you have a 10 page essay assignment, spend time thinking about what you would like to write while doing everyday tasks. That way, by the time you sit down in front of a computer, you have a fairly good idea of how it should be organized and will write much faster.
+ <b id="f1">1</b> The same principle applies to writing essays, if you have a 10 page essay assignment, spend time thinking about what you would like to write while doing everyday tasks. That way, by the time you sit down in front of a computer, you have a fairly good idea of how it should be organized and will write much faster.[↩](#a1)
 
- <b id="f2">2</b> You will find this is necessary after a few test runs, you won't be able to remember whether you chose `x` or `o`!
+ <b id="f2">2</b> You will find this is necessary after a few test runs, you won't be able to remember whether you chose `x` or `o`![↩](#a2)
