@@ -14,7 +14,7 @@ Excuse the silent film and awkward pauses here and there. I tapped into my inner
 
 So let's start!
 
-# The planning stage
+## The planning stage
 
 We must always start with a plan. The more you plan, the less time you spend trying to make things work. For this stage, I like to write down anything that comes to mind on a piece of paper. I then identify key functionalities the code has to achieve and think of a way to best organize it. Sometimes, I do this while watching a tv show and would even go as far as to write the code on paper<sup id="a1">[1](#f1)</sup>. 
 
@@ -42,17 +42,17 @@ Optional: ask if user would like to play another game.
 
 But this is good! Now circle the things that can be grouped together, see if anything is redundant, highlight the key functionalities you need to write. And you may have an organization resembling this:
 
-**class Player()**
+**class Player()**<br>
 * Character (data)
 * Name (data)
 
-**class Human(Player)**
+**class Human(Player)**<br>
 * Play (method)
 
-**class Computer(Player)**
+**class Computer(Player)**<br>
 * Play (method)
 
-**class Game()**
+**class Game()**<br>
 * Board (data)
 * Winner (data)
 * isOver (method)
@@ -62,8 +62,8 @@ But this is good! Now circle the things that can be grouped together, see if any
 
 This is a skeleton to build our game on. We can go ahead and set up these classes and then start writing code for them in small sections. If you feel confused about what to include or how to implement an idea, just write down everything you think you have to set up for this section and go through the same process of organizing them.
 
-**class Game()**
-_Board_
+##class Game()
+###Board
 
 What abstraction is best for the tictactoe board and pieces? In considering this problem, I happened upon [PyBites' TicTacToe challenge](https://pybit.es/codechallenge12.html). They suggested using the following to represent the board:
 
@@ -101,7 +101,7 @@ class Game():
 
 This would be a good time to write a method for the `Game()` class that will allow us to print the board. Mine is nothing fancy, it literally is just the number pad as I showed above. But you can make this look very polished with boxes or the classic hash design if you have some talent with doing text-based art. But just the number pad by itself is very playable (I've tested it on people).
 
-**Players**
+##Players
 
 Let's set up our human players so we are able to test our code as we go along. You can do whatever you like as long as it works. You don't even have to do `o` and `x` for your pieces. Aim for an easy and simple interface. Test your code to make sure everything works!
 
@@ -180,7 +180,7 @@ I did it this way:
 * Write an `updateBoard(location, character)` method for `Game()` that will update the `board` object by placing the character in the location specified. The advantage of doing this is that our `Computer(Player)` can use the same method to play.
 * In `Human(Player)`'s `play()` method, it informs the player that it's their turn, and reminds them what their character is<sup id="a2">[2](#f2)</sup>. It then prints the current board and prompts the player to enter the number of the cell they would like to play. If it's not a valid move, it'll prompt for another number until it is valid. Once a valid number is obtained, it calls `self.game.updateBoard(input, self.char)`. That updates the board and the human has played!
 
-### IsOver
+### IsOver()
 
 Forget about the `Computer(Player)` for now. Let's write the function that will determine if our game is over. Because this is such a simple game, the number of solutions to the game is very small, in fact, there are only 8 possible winning solutions:
 
@@ -313,7 +313,7 @@ Test this code by playing it several times with several different moves. Does th
 
 And we're done!
 
-<center>**Footnotes**</center>
+<center>Footnotes</center>
 
  <b id="f1">1</b> The same principle applies to writing essays, if you have a 10 page essay assignment, spend time thinking about what you would like to write while doing everyday tasks. That way, by the time you sit down in front of a computer, you have a fairly good idea of how it should be organized and will write much faster.
 
