@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      MNIST handwritten digit recognition: A comparison between One-vs-All from scratch and One-vs-All from scikit-learn &middot; suanchinyeo
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <!-- Begin Jekyll SEO tag v2.4.0 -->
+<title>MNIST handwritten digit recognition: A comparison between One-vs-All from scratch and One-vs-All from scikit-learn | suanchinyeo</title>
+<meta name="generator" content="Jekyll v3.7.3" />
+<meta property="og:title" content="MNIST handwritten digit recognition: A comparison between One-vs-All from scratch and One-vs-All from scikit-learn" />
+<meta name="author" content="Suan Chin Yeo" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="This is a documentation of my steps in building a one-vs-all learning algorithm from scratch and its performance on the MNIST handwriting dataset. I will then use the most similar algorithm available in scikit-learn library and we’ll take a look at the pros and cons of each." />
+<meta property="og:description" content="This is a documentation of my steps in building a one-vs-all learning algorithm from scratch and its performance on the MNIST handwriting dataset. I will then use the most similar algorithm available in scikit-learn library and we’ll take a look at the pros and cons of each." />
+<link rel="canonical" href="http://localhost:4000/2018-03-16/mnist1" />
+<meta property="og:url" content="http://localhost:4000/2018-03-16/mnist1" />
+<meta property="og:site_name" content="suanchinyeo" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-03-16T00:00:00-04:00" />
+<script type="application/ld+json">
+{"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2018-03-16/mnist1"},"author":{"@type":"Person","name":"Suan Chin Yeo"},"description":"This is a documentation of my steps in building a one-vs-all learning algorithm from scratch and its performance on the MNIST handwriting dataset. I will then use the most similar algorithm available in scikit-learn library and we’ll take a look at the pros and cons of each.","@type":"BlogPosting","headline":"MNIST handwritten digit recognition: A comparison between One-vs-All from scratch and One-vs-All from scikit-learn","dateModified":"2018-03-16T00:00:00-04:00","datePublished":"2018-03-16T00:00:00-04:00","url":"http://localhost:4000/2018-03-16/mnist1","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+
+  <body>
+    <nav class="nav">
+      <div class="nav-container">
+        <a href="/">
+          <h2 class="nav-title">suanchinyeo</h2>
+        </a>
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/">Posts</a></li>
+        </ul>
+    </div>
+  </nav>
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Suan Chin Yeo
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2018-03-16 00:00:00 -0400">March 16, 2018</time>
+    
+  </div>
+
+  <h1 class="post-title">MNIST handwritten digit recognition: A comparison between One-vs-All from scratch and One-vs-All from scikit-learn</h1>
+  <div class="post-line"></div>
+
+  <p>This is a documentation of my steps in building a one-vs-all learning algorithm from scratch and its performance on the <a href="https://www.kaggle.com/c/digit-recognizer">MNIST handwriting dataset</a>. I will then use the most similar algorithm available in scikit-learn library and we’ll take a look at the pros and cons of each.</p>
+
+<p>The motivation for this project is for me to walk through the logic and math of this algorithm. I like to connect the dots of the details of the algorithms I use, and the most concrete way to do this is to build it from scratch. However, many machine learning packages are written with greater considerations of different models and optimizations. It is unfeasible and unecessary to write algorithms that are as good or better than available existing libraries that have been constructed with thought and care by experts. So this project serves a second purpose: to understand the options available and how to use scikit-learn to obtain equal or better results once I understand the basics of the algorithm.</p>
+
+<h2 id="the-challenge">The challenge</h2>
+<p>The MNIST dataset is a well known dataset to learn about image classification or just classification in general. It contains handwritten digits from 0 to 9, 28x28 pixels in size. Our task is to train a model that will be able to take an image as input and predict the digit on that image.</p>
+
+<p>The dataset used for this post is downloaded from <a href="https://www.kaggle.com/c/digit-recognizer">Kaggle</a>. But it is available in many different places as well. In this dataset, each row is a sample. One column is the label, which tells us the digit of the sample (0-9). The rest of the columns are intensities of the pixels of the image. So we have 28 x 28 = 784 columns of pixel intensities.</p>
+
+<p>These are some examples of the images:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="n">sns</span> <span class="c"># optional. Makes matplotlib more visually pleasing.</span>
+
+<span class="n">MNIST</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">"train.csv"</span><span class="p">)</span>
+<span class="n">images</span> <span class="o">=</span> <span class="p">[]</span>
+
+<span class="c"># populate images with the first occuring samples of each digit, convert</span>
+<span class="c"># pandas dataframe to numpy arrays so that they can be plotted as images</span>
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">MNIST</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">MNIST</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s">"label"</span><span class="p">]</span> <span class="o">==</span> <span class="n">i</span><span class="p">,</span> <span class="p">]</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">a</span><span class="o">.</span><span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="p">]</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="mi">1</span><span class="p">:,</span> <span class="p">]</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">values</span>
+    <span class="n">a</span> <span class="o">=</span> <span class="n">a</span><span class="o">.</span><span class="n">reshape</span><span class="p">(</span><span class="mi">28</span><span class="p">,</span> <span class="mi">28</span><span class="p">)</span>
+    <span class="n">images</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+
+<span class="n">fig</span><span class="p">,</span> <span class="n">ax</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">plt</span><span class="o">.</span><span class="n">subplots</span><span class="p">(</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">)</span>
+<span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="k">for</span> <span class="n">r</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">2</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">5</span><span class="p">):</span>
+        <span class="n">ax</span><span class="p">[</span><span class="n">r</span><span class="p">,</span> <span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">imshow</span><span class="p">(</span><span class="n">images</span><span class="p">[</span><span class="n">n</span><span class="p">])</span>
+        <span class="n">ax</span><span class="p">[</span><span class="n">r</span><span class="p">,</span> <span class="n">c</span><span class="p">]</span><span class="o">.</span><span class="n">axis</span><span class="p">(</span><span class="s">"off"</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s">"images.png"</span><span class="p">,</span> <span class="n">bbox_inches</span><span class="o">=</span><span class="s">"tight"</span><span class="p">,</span> <span class="n">pad_inches</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span></code></pre></figure>
+
+<p><img src="https://suanchinyeo.github.io/assets/MNISTexampleimage.png" alt="MNISTexampleimage" /></p>
+
+<p>Because we have more than one feature, we also need to standardize them, or gradient descent will take forever to converge, if it converges at all.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">standardize</span><span class="p">(</span><span class="n">inputdata</span><span class="p">,</span> <span class="n">columns</span><span class="p">):</span>
+    <span class="s">""" data is a pandas dataframe to be standardized
+columns is a list of column names to be standardized.
+Returns a dataframe where values are standardized by:
+((value-mean)/range)."""</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">inputdata</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">columns</span><span class="p">:</span>
+        <span class="n">imean</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">if</span> <span class="n">imean</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">irange</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="o">-</span><span class="nb">min</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+        <span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">-</span><span class="n">imean</span><span class="p">)</span><span class="o">/</span><span class="n">irange</span>
+    <span class="k">return</span> <span class="n">data</span>
+
+<span class="n">featureCols</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">MNIST</span><span class="o">.</span><span class="n">columns</span><span class="p">[</span><span class="mi">1</span><span class="p">:]]</span>
+
+<span class="n">mnist</span> <span class="o">=</span> <span class="n">standardize</span><span class="p">(</span><span class="n">MNIST</span><span class="p">,</span> <span class="n">featureCols</span><span class="p">)</span></code></pre></figure>
+
+<p>For each image, there are a lot of pixels that likely remain empty/white for all samples. This can be confirmed when you run <code class="highlighter-rouge">MNIST.describe()</code>. These pixels/features can be removed because they remain constant in the dataset, thus will have no predictive impact on the model. We can remove the pixels that have a standard deviation of 0. Meaning there is no variation in pixels of this location in the entire training set.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">mnistSumStats</span> <span class="o">=</span> <span class="n">mnist</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+<span class="n">mnist</span> <span class="o">=</span> <span class="n">mnist</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">mnistSumStats</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="s">"std"</span><span class="p">,]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">]</span>
+
+<span class="c"># this takes a while to compute, so save and load later.</span>
+<span class="n">mnist</span><span class="o">.</span><span class="n">to_csv</span><span class="p">(</span><span class="s">"mnistClean.csv"</span><span class="p">,</span> <span class="n">index</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span></code></pre></figure>
+
+<h2 id="logistic-regression-one-vs-all-from-scratch">Logistic Regression One-vs-All from scratch</h2>
+<p>Logistic regression is used for binary classification. The hypothesis function in logistic regression takes in x-values (the features), and outputs a y-value (prediction) between 0 and 1. With 1 being positive and 0 being negative.</p>
+
+<p>In this case, an x value will be the intensity of a pixel at a specific location, and y value would be 0 or 1.</p>
+
+<p>The hypothesis calculation:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">hypothesis</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">theta</span><span class="p">):</span>
+    <span class="s">""" Takes X and theta and returns the hypothesis
+for logistic regression (sigmoidal curve).
+X - numpy matrix of shape x, j
+theta - numpy matrix of shape k, j
+where x is the number of samples,
+j is the number of features,
+k is the number of y-values.
+returns a matrix of shape x, k."""</span>
+    <span class="k">return</span> <span class="mi">1</span><span class="o">/</span><span class="p">(</span><span class="mi">1</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">exp</span><span class="p">(</span><span class="o">-</span><span class="p">(</span><span class="n">X</span><span class="o">*</span><span class="n">theta</span><span class="o">.</span><span class="n">T</span><span class="p">)))</span></code></pre></figure>
+
+<p>How can we classify our dataset into 10 categories if logistic regression only classifies into two groups (0 or 1)? One-vs-All means we train 10 models, one for each digit. For example, to classify 5, the model will treat all other digits as one class and digits 5 as another. It would output a value close to 1 if it predicts an image to be 5 and 0 if it predicts and image to be not 5. This is written after going through <a href="https://www.youtube.com/watch?v=-EIfb6vFJzc&amp;index=38&amp;list=PLLssT5z_DsK-h9vYZkQkYNWcItqhlRJLN">Andrew Ng’s Machine Learning lectures on one-vs-all logistic regression</a>.</p>
+
+<p>To be able to train these models, we need to classify our samples into 10 labels of 0’s and 1’s instead of 0 to 9.</p>
+
+<p>Processing y-values so that it is a 1x10 vector of 0’s and 1’s:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">mnist</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">"mnistClean.csv"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">setUpY</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">Ycolumn</span><span class="p">,</span> <span class="n">Yvalue</span><span class="p">):</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="n">data</span><span class="p">)</span>
+    <span class="k">return</span> <span class="p">(</span><span class="n">res</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="n">Ycolumn</span><span class="p">]</span> <span class="o">==</span> <span class="n">Yvalue</span><span class="p">)</span><span class="o">*</span><span class="mi">1</span>
+
+<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">):</span>
+    <span class="n">mnist</span><span class="p">[</span><span class="nb">str</span><span class="p">(</span><span class="n">i</span><span class="p">)]</span> <span class="o">=</span> <span class="n">setUpY</span><span class="p">(</span><span class="n">mnist</span><span class="p">,</span> <span class="s">"label"</span><span class="p">,</span> <span class="n">i</span><span class="p">)</span></code></pre></figure>
+
+<p>This results in the following:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">mnist</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">709</span><span class="p">:]</span><span class="o">.</span><span class="n">head</span><span class="p">()</span></code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python">   <span class="mi">0</span>  <span class="mi">1</span>  <span class="mi">2</span>  <span class="mi">3</span>  <span class="mi">4</span>  <span class="mi">5</span>  <span class="mi">6</span>  <span class="mi">7</span>  <span class="mi">8</span>  <span class="mi">9</span>
+<span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">1</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>
+<span class="mi">1</span>  <span class="mi">1</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>
+<span class="mi">2</span>  <span class="mi">0</span>  <span class="mi">1</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>
+<span class="mi">3</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">1</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>
+<span class="mi">4</span>  <span class="mi">1</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span>  <span class="mi">0</span></code></pre></figure>
+
+<p>To train 10 models in one go, it will be much easier to use numpy matrices and linear algebra than to do it iteratively. As the hypothesis function is written for numpy matrices, we can easily scale this up to 10 models.</p>
+
+<p>Right now, we have reduced the number of features to 709 by removing pixels with no variations. Our label has gone from 1 column to 10 columns by generating the 0 and 1 matrices. We have 42000 rows in our training data downloaded from Kaggle. Therefore, <code class="highlighter-rouge">X</code> is now a <code class="highlighter-rouge">42000 x 709 matrix</code>. <code class="highlighter-rouge">Y</code> is a <code class="highlighter-rouge">42000 x 10 matrix</code>. For <code class="highlighter-rouge">theta</code> to multiply <code class="highlighter-rouge">X</code> and get a matrix that has the same dimension as <code class="highlighter-rouge">Y</code>, it has to be a <code class="highlighter-rouge">10 x 709 matrix</code>. It may be easier to have it as a <code class="highlighter-rouge">709 x 10 matrix</code>, but because of how I set up my code when I used it for binary classification (and so <code class="highlighter-rouge">theta</code> was only a vector rather than a matrix), it’s easier for me to change the dimension of <code class="highlighter-rouge">theta</code>.</p>
+
+<p>Of course, our next step is to split the dataset into <code class="highlighter-rouge">train</code>, <code class="highlighter-rouge">validation</code>, and <code class="highlighter-rouge">test</code> set. This will change the shapes of our <code class="highlighter-rouge">X</code> and <code class="highlighter-rouge">Y</code> matrices but you can work out that it will not affect the shape of <code class="highlighter-rouge">theta</code>.</p>
+
+<p>Here’s a really bad, throwaway function that will split the data into <code class="highlighter-rouge">train</code>, <code class="highlighter-rouge">validation</code>, and <code class="highlighter-rouge">test</code> sets. Split the data after processing the y-values, dropping the original “label” column, and adding a column of x0 (values of 1).</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">mnist</span><span class="o">.</span><span class="n">insert</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="s">"x0"</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="c"># insert x0</span>
+<span class="n">mnist</span> <span class="o">=</span> <span class="n">mnist</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">:]</span> <span class="c"># drop the "label" column</span>
+
+<span class="k">def</span> <span class="nf">splitData</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">trainpc</span><span class="p">,</span> <span class="n">validpc</span><span class="p">):</span>
+    <span class="s">"""given a data frame, returns
+training, validation, test sets that are shuffled."""</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">10101</span><span class="p">)</span>
+    <span class="n">shuffled</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+    <span class="n">totrows</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">trainsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">trainpc</span><span class="o">*</span><span class="n">totrows</span><span class="p">)</span>
+    <span class="n">validsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">validpc</span><span class="o">*</span><span class="n">totrows</span><span class="p">)</span><span class="o">+</span><span class="n">trainsize</span>
+    <span class="k">return</span> <span class="n">shuffled</span><span class="p">[:</span><span class="n">trainsize</span><span class="p">],</span> <span class="n">shuffled</span><span class="p">[</span><span class="n">trainsize</span><span class="p">:</span><span class="n">validsize</span><span class="p">],</span> <span class="n">shuffled</span><span class="p">[</span><span class="n">validsize</span><span class="p">:]</span>
+
+<span class="n">train</span><span class="p">,</span> <span class="n">validation</span><span class="p">,</span> <span class="n">test</span> <span class="o">=</span> <span class="n">splitData</span><span class="p">(</span><span class="n">mnist</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span></code></pre></figure>
+
+<p>We are now almost ready to go. We just need a cost function to optimize and a function to update theta values while doing gradient descent/ascent. Because this is logistic regression, the cost function is the log likelihood function. You can put a negative to this function so it decreases to 0 rather than increase to 0, but it really is the same thing:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># regularization is not done to theta0, so these are the functions to separate</span>
+<span class="c"># theta into theta0 and thetaj for subsequent calculations.</span>
+<span class="k">def</span> <span class="nf">splitTheta</span><span class="p">(</span><span class="n">theta</span><span class="p">):</span>
+    <span class="n">theta0</span><span class="p">,</span> <span class="n">thetaj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">theta</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">theta0</span><span class="p">,</span> <span class="n">thetaj</span>
+
+<span class="k">def</span> <span class="nf">joinTheta</span><span class="p">(</span><span class="n">theta0</span><span class="p">,</span> <span class="n">thetaj</span><span class="p">):</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">((</span><span class="n">theta0</span><span class="p">,</span> <span class="n">thetaj</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="c"># log likelihood. To be maximized. (with regularization term)</span>
+<span class="k">def</span> <span class="nf">logllhood</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">lmb</span><span class="p">):</span>
+    <span class="n">theta0</span><span class="p">,</span> <span class="n">thetaj</span> <span class="o">=</span> <span class="n">splitTheta</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+    <span class="n">res</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">hypothesis</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">theta</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">y</span><span class="o">+</span><span class="n">np</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">hypothesis</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">theta</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">y</span><span class="p">)</span><span class="o">-</span><span class="p">(</span><span class="n">lmb</span><span class="o">/</span><span class="mi">2</span><span class="p">)</span><span class="o">*</span><span class="n">thetaj</span><span class="o">*</span><span class="n">thetaj</span><span class="o">.</span><span class="n">T</span>
+    <span class="k">return</span> <span class="n">res</span><span class="o">.</span><span class="n">diagonal</span><span class="p">()</span>
+
+<span class="c"># You can think of this as gradient descent if you put a negative to the log</span>
+<span class="c"># likelihood. It achieves the same goal, we're just flipping values across the x-axis.</span>
+<span class="k">def</span> <span class="nf">gradientAscent</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Xj</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">lmb</span><span class="p">):</span>
+    <span class="n">theta0</span><span class="p">,</span> <span class="n">thetaj</span> <span class="o">=</span> <span class="n">splitTheta</span><span class="p">(</span><span class="n">theta</span><span class="p">)</span>
+    <span class="n">theta0</span> <span class="o">=</span> <span class="n">theta0</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span> <span class="n">alpha</span><span class="o">*</span><span class="p">(</span><span class="n">lmb</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">)))</span> <span class="o">+</span> <span class="n">alpha</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">))</span><span class="o">*</span><span class="p">((</span><span class="n">y</span><span class="o">-</span><span class="n">hypothesis</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">theta</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">x0</span><span class="p">)</span>
+    <span class="n">thetaj</span> <span class="o">=</span> <span class="n">thetaj</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">-</span> <span class="n">alpha</span><span class="o">*</span><span class="p">(</span><span class="n">lmb</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">)))</span> <span class="o">+</span> <span class="n">alpha</span><span class="o">*</span><span class="p">(</span><span class="mi">1</span><span class="o">/</span><span class="nb">len</span><span class="p">(</span><span class="n">X</span><span class="p">))</span><span class="o">*</span><span class="p">((</span><span class="n">y</span><span class="o">-</span><span class="n">hypothesis</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">theta</span><span class="p">))</span><span class="o">.</span><span class="n">T</span><span class="o">*</span><span class="n">Xj</span><span class="p">)</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">joinTheta</span><span class="p">(</span><span class="n">theta0</span><span class="p">,</span> <span class="n">thetaj</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">theta</span></code></pre></figure>
+
+<p>Because this dataset is rather large, I’m hesitant to do batch gradient descent/ascent. Instead I’ve decided to implement mini batch gradient descent.</p>
+
+<p>Batch gradient descent does a calculation with the entire training set and returns a new theta value. Stochastic gradient descent does a calculation with a single sample and updates the theta value. Mini batch gradient descent does a calculation with a subset of the dataset, and updates the theta value. So it’s a compromise of the batch and stochastic gradient descent.</p>
+
+<p>To do this, we just have to split our training set up into mini batches. Here, I’ve done the math and a mini batch of 4200 is splitting the training data into eight equal batches. However, there’s no need to keep it equal in size if you don’t want to, everything still works. I just want to prevent missing data because of the way numbers and division work in python.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">makeMiniBatches</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">miniBatchSize</span><span class="p">):</span>
+    <span class="s">"""Shuffles and makes data into a list of minibatches
+of length x. """</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">miniBatchSize</span><span class="p">)</span>
+    <span class="n">shuffled</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+    <span class="n">totX</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="n">shuffled</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">np</span><span class="o">.</span><span class="n">array_split</span><span class="p">(</span><span class="n">totX</span><span class="p">,</span> <span class="n">x</span><span class="p">)</span></code></pre></figure>
+
+<p>We are now ready to construct the main loop. This will be the function that gets our model to go through the dataset in mini batches until convergence.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">mainLoop</span><span class="p">(</span><span class="n">trainingset</span><span class="p">,</span> <span class="n">miniBatchSize</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">lmb</span><span class="p">,</span> <span class="n">iters</span><span class="p">,</span> <span class="n">numberOfLabels</span><span class="p">):</span>
+    <span class="n">miniBatches</span> <span class="o">=</span> <span class="n">makeMiniBatches</span><span class="p">(</span><span class="n">trainingset</span><span class="p">,</span> <span class="n">miniBatchSize</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="n">trainingset</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="p">[</span><span class="mi">709</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="nb">len</span><span class="p">(</span><span class="n">miniBatches</span><span class="p">)</span>
+    <span class="n">n</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">theta</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span> <span class="p">[[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="mi">709</span><span class="p">]</span><span class="o">*</span><span class="n">numberOfLabels</span> <span class="p">)</span>
+    <span class="n">logll</span> <span class="o">=</span> <span class="p">[[]</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">numberOfLabels</span><span class="p">)]</span>
+    <span class="n">iterations</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="k">while</span> <span class="n">n</span> <span class="o">&lt;=</span> <span class="n">iters</span><span class="p">:</span>
+        <span class="k">if</span> <span class="p">(</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">)</span><span class="o">%</span><span class="n">x</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">miniBatches</span> <span class="o">=</span> <span class="n">makeMiniBatches</span><span class="p">(</span><span class="n">trainingset</span><span class="p">,</span> <span class="n">miniBatchSize</span><span class="p">)</span>
+            <span class="n">i</span> <span class="o">=</span> <span class="mi">0</span>
+        <span class="n">mini</span> <span class="o">=</span> <span class="n">miniBatches</span><span class="p">[</span><span class="n">i</span><span class="p">]</span>
+        <span class="n">Xmini</span><span class="p">,</span> <span class="n">Ymini</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">mini</span><span class="p">,</span> <span class="p">[</span><span class="mi">709</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">x0</span><span class="p">,</span> <span class="n">xj</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">Xmini</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="n">theta</span> <span class="o">=</span> <span class="n">gradientAscent</span><span class="p">(</span><span class="n">Xmini</span><span class="p">,</span> <span class="n">xj</span><span class="p">,</span> <span class="n">Ymini</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">x0</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">lmb</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">n</span><span class="o">%</span><span class="mi">100</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="n">iterations</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="n">err</span> <span class="o">=</span> <span class="n">logllhood</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">,</span> <span class="n">theta</span><span class="p">,</span> <span class="n">lmb</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">p</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">logll</span><span class="p">)):</span>
+                <span class="n">logll</span><span class="p">[</span><span class="n">p</span><span class="p">]</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">err</span><span class="p">[</span><span class="mi">0</span><span class="p">,</span> <span class="n">p</span><span class="p">])</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">n</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">err</span><span class="p">)</span>
+        <span class="n">n</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="n">i</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="k">return</span> <span class="n">theta</span><span class="p">,</span> <span class="n">logll</span><span class="p">,</span> <span class="n">iterations</span></code></pre></figure>
+
+<p>This function does the following:</p>
+<ol>
+  <li>Makes a list of pandas dataframe of <code class="highlighter-rouge">miniBatchSize</code> from training data.</li>
+  <li>Makes <code class="highlighter-rouge">X</code> and <code class="highlighter-rouge">Y</code> matrices from training data. (for log likelihood calculations)</li>
+  <li>Goes through mini batches after mini batches for <code class="highlighter-rouge">iters</code> number of times, updating <code class="highlighter-rouge">theta</code> at every iteration.</li>
+  <li>Reports and records the log likelihood every 100 iterations. This helps us plot the cost function later on. The reporting is for your sanity.<sup id="a1"><a href="#f1">1</a></sup></li>
+</ol>
+
+<p>We are now ready to train!</p>
+
+<p>It’s good to have a bit of a system set up while training. I like to look at the cost function (it’s called error in this code) over number of iterations. This is a great check to be sure that your alpha value is not so large that your model has overshot the minimum (gradient descent) or maximum (gradient ascent). By having the loop report the errors every 100 iterations, we can also check that the values make sense. In this case, log likelihood starts from a huge negative number and approaches 0 asymptotically. So if it does something weird like shoot up to positive values, the math is wrong somewhere. Terminate and find the bug.</p>
+
+<p>If the model is not working as you had hoped, you can also do many other different types of plots to debug the model or figure out what hyperparameters can be tweaked to make it better. I won’t be doing those here because they weren’t necessary. I also look at the accuracy on the training set and the accuracy on the validation set.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">alpha</span> <span class="o">=</span> <span class="mi">10</span>
+<span class="n">lmb</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">iters</span> <span class="o">=</span> <span class="mi">6000</span>
+
+<span class="n">theta</span><span class="p">,</span> <span class="n">logll</span><span class="p">,</span> <span class="n">iterations</span> <span class="o">=</span> <span class="n">mainLoop</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="mi">4200</span><span class="p">,</span> <span class="n">alpha</span><span class="p">,</span> <span class="n">lmb</span><span class="p">,</span> <span class="n">iters</span><span class="p">,</span> <span class="mi">10</span><span class="p">)</span>
+
+<span class="n">error</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">logll</span><span class="p">)</span>
+<span class="n">error</span> <span class="o">=</span> <span class="n">error</span><span class="o">.</span><span class="n">transpose</span><span class="p">()</span>
+<span class="n">error</span><span class="p">[</span><span class="s">"iterations"</span><span class="p">]</span> <span class="o">=</span> <span class="n">iterations</span>
+<span class="n">error</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">melt</span><span class="p">(</span><span class="n">error</span><span class="p">,</span> <span class="n">id_vars</span> <span class="o">=</span> <span class="s">"iterations"</span><span class="p">,</span> <span class="n">value_vars</span> <span class="o">=</span> <span class="p">[</span><span class="n">i</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">10</span><span class="p">)])</span>
+<span class="n">error</span><span class="p">[</span><span class="s">"value"</span><span class="p">]</span> <span class="o">=</span> <span class="nb">abs</span><span class="p">(</span><span class="n">error</span><span class="p">[</span><span class="s">"value"</span><span class="p">])</span>
+
+<span class="n">g</span> <span class="o">=</span> <span class="n">sns</span><span class="o">.</span><span class="n">lmplot</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="s">"iterations"</span><span class="p">,</span>
+               <span class="n">y</span> <span class="o">=</span> <span class="s">"value"</span><span class="p">,</span>
+               <span class="n">hue</span> <span class="o">=</span> <span class="s">"variable"</span><span class="p">,</span>
+               <span class="n">data</span> <span class="o">=</span> <span class="n">error</span><span class="p">,</span>
+               <span class="n">fit_reg</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span>
+               <span class="n">legend</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">plt</span><span class="o">.</span><span class="n">legend</span><span class="p">(</span><span class="n">loc</span> <span class="o">=</span> <span class="s">"upper right"</span><span class="p">)</span>
+<span class="n">g</span><span class="o">.</span><span class="nb">set</span><span class="p">(</span><span class="n">yscale</span> <span class="o">=</span> <span class="s">"log"</span><span class="p">)</span>
+<span class="n">sns</span><span class="o">.</span><span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="s">"80percenttraininglambda"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">lmb</span><span class="p">)</span><span class="o">+</span><span class="s">"alpha"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span><span class="o">+</span><span class="s">"iter"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">iters</span><span class="p">)</span><span class="o">+</span><span class="s">".png"</span><span class="p">)</span>
+
+<span class="c"># predict</span>
+<span class="k">def</span> <span class="nf">predict</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">theta</span><span class="p">):</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">matrix</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">values</span><span class="p">)</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="p">[</span><span class="mi">709</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">predictedVal</span> <span class="o">=</span> <span class="n">hypothesis</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">theta</span><span class="p">)</span>
+
+    <span class="n">predictedNum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">predictedVal</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="n">actualNum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">Y</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+
+    <span class="n">accuracy</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">actualNum</span> <span class="o">==</span> <span class="n">predictedNum</span><span class="p">)</span><span class="o">/</span><span class="n">actualNum</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">"actual"</span> <span class="p">:</span> <span class="n">actualNum</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="s">"predicted"</span> <span class="p">:</span> <span class="n">predictedNum</span><span class="o">.</span><span class="n">tolist</span><span class="p">()})</span>
+    <span class="n">df</span><span class="p">[</span><span class="s">"accuracy"</span><span class="p">]</span> <span class="o">=</span> <span class="p">(</span><span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s">"actual"</span><span class="p">]</span> <span class="o">==</span> <span class="n">df</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s">"predicted"</span><span class="p">])</span><span class="o">*</span><span class="mi">1</span>
+    
+    <span class="k">return</span> <span class="nb">float</span><span class="p">(</span><span class="n">accuracy</span><span class="p">),</span> <span class="n">df</span>
+
+<span class="n">train_accur</span><span class="p">,</span> <span class="n">trainpd</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">train</span><span class="p">,</span> <span class="n">theta</span><span class="p">)</span>
+<span class="n">valid_accur</span><span class="p">,</span> <span class="n">validpd</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">validation</span><span class="p">,</span> <span class="n">theta</span><span class="p">)</span>
+
+<span class="kn">import</span> <span class="nn">pickle</span>
+<span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">"alpha"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">alpha</span><span class="p">)</span><span class="o">+</span><span class="s">"lambda"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">lmb</span><span class="p">)</span><span class="o">+</span><span class="s">"iter"</span><span class="o">+</span><span class="nb">str</span><span class="p">(</span><span class="n">iters</span><span class="p">)</span><span class="o">+</span><span class="s">".pckl"</span><span class="p">,</span> <span class="s">"wb"</span><span class="p">)</span>
+<span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">([</span><span class="n">theta</span><span class="p">,</span> <span class="n">error</span><span class="p">,</span> <span class="n">train_accur</span><span class="p">,</span> <span class="n">trainpd</span><span class="p">,</span> <span class="n">valid_accur</span><span class="p">,</span> <span class="n">validpd</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
+<span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span></code></pre></figure>
+
+<p>This way, everytime we finish training, we have several things to look at and decide if we should train again and if so, with what changes.</p>
+
+<p>After training for several alpha values (starting from a conservative 0.01), 10 appears to be the best and 6000 iterations is quite good for having comparable accuracy in training and validation sets.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">train_accur</span>
+<span class="mf">0.9355357142857142</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">valid_accur</span>
+<span class="mf">0.919047619047619</span></code></pre></figure>
+
+<p>Here is the cost function at 6000 iterations. I’ve plotted the absolute values for ease of plotting on a log scale (just laziness to read the docs and figure out how to do negative log scale).</p>
+
+<p><img src="https://suanchinyeo.github.io/assets/MNIST1loglikelihood.png" alt="loglikelihood" /></p>
+
+<p>This is a very interesting plot as you can see which digits have models that produce better predictions. 8 and 9 suffer from a high error compared to models for 1 and 0. Apparently, some digits are easier to read than others! This makes sense as there are variations in how digits are written, but some digits, such as 0 and 1, have less variations. Different models also converge at different rates. Models for 8 and 9 clearly converged much earlier than models for 0 and 1.</p>
+
+<p>Now that I’m satisfied with the error rates and accuracy in training and validation sets, let’s see how it does with the test set:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">test_accur</span><span class="p">,</span> <span class="n">testpd</span> <span class="o">=</span> <span class="n">predict</span><span class="p">(</span><span class="n">test</span><span class="p">,</span> <span class="n">theta</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">test_accur</span>
+<span class="mf">0.9154761904761904</span></code></pre></figure>
+
+<p>This is fairly good! It’s close to our validation accuracy, so we don’t have too big of a overfitting/underfitting problem.</p>
+
+<h2 id="logistic-regression-one-vs-all-with-scikit-learn">Logistic Regression One-vs-All with scikit-learn</h2>
+<p>Now let’s see how scikit-learn compares. From <a href="http://scikit-learn.org/stable/modules/linear_model.html#logistic-regression">the documentation</a>, I compared the different algorithms and functions available. I determined the function most similar to my implementation of the One-vs-All is the <code class="highlighter-rouge">LogisticRegression</code> with L2 penalized and using <code class="highlighter-rouge">liblinear</code> solver.</p>
+
+<p>It’s important to note that the documentation and <a href="http://scikit-learn.org/stable/auto_examples/linear_model/plot_sparse_logistic_regression_mnist.html#sphx-glr-auto-examples-linear-model-plot-sparse-logistic-regression-mnist-py">tutorial</a> clearly states that this is not the best multiclass classification to use within the library and even within logistic regression classifiers. The purpose of using this classifier is to do a comparison between the method I wrote and how I would be able to implement something similar with scikit learn.</p>
+
+<p>Using the tutorial on scikit learn, I was able to feed the same training and validation sets into the model as I used for my own model:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="n">plt</span>
+<span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="n">sns</span>
+<span class="kn">import</span> <span class="nn">copy</span> <span class="k">as</span> <span class="n">copy</span>
+<span class="kn">from</span> <span class="nn">sklearn.linear_model</span> <span class="kn">import</span> <span class="n">LogisticRegression</span>
+
+<span class="n">mnist</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="s">"mnistClean.csv"</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">splitData</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">trainpc</span><span class="p">,</span> <span class="n">validpc</span><span class="p">):</span>
+    <span class="s">"""given a data frame, returns
+training, validation, test sets that are shuffled."""</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">10101</span><span class="p">)</span>
+    <span class="n">shuffled</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">))</span>
+    <span class="n">totrows</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">trainsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">trainpc</span><span class="o">*</span><span class="n">totrows</span><span class="p">)</span>
+    <span class="n">validsize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">validpc</span><span class="o">*</span><span class="n">totrows</span><span class="p">)</span><span class="o">+</span><span class="n">trainsize</span>
+    <span class="k">return</span> <span class="n">shuffled</span><span class="p">[:</span><span class="n">trainsize</span><span class="p">],</span> <span class="n">shuffled</span><span class="p">[</span><span class="n">trainsize</span><span class="p">:</span><span class="n">validsize</span><span class="p">],</span> <span class="n">shuffled</span><span class="p">[</span><span class="n">validsize</span><span class="p">:]</span>
+
+<span class="n">train</span><span class="p">,</span> <span class="n">validation</span><span class="p">,</span> <span class="n">test</span> <span class="o">=</span> <span class="n">splitData</span><span class="p">(</span><span class="n">mnist</span><span class="p">,</span> <span class="mf">0.8</span><span class="p">,</span> <span class="mf">0.1</span><span class="p">)</span>
+
+<span class="n">Y</span><span class="p">,</span> <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">train</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">Yv</span><span class="p">,</span> <span class="n">Xv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="n">validation</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+
+<span class="n">Y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">Y</span><span class="p">)</span>
+<span class="n">Yv</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">ravel</span><span class="p">(</span><span class="n">Yv</span><span class="p">)</span>
+
+<span class="n">model</span> <span class="o">=</span> <span class="n">LogisticRegression</span><span class="p">(</span> <span class="n">C</span> <span class="o">=</span> <span class="mi">10</span><span class="o">/</span><span class="n">train</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span>
+                            <span class="n">penalty</span> <span class="o">=</span> <span class="s">"l2"</span><span class="p">,</span>
+                            <span class="n">solver</span> <span class="o">=</span> <span class="s">"liblinear"</span><span class="p">,</span>
+                            <span class="n">max_iter</span> <span class="o">=</span> <span class="mi">6000</span><span class="p">,</span>
+                            <span class="n">verbose</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">model</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+<span class="n">train_accur</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">Y</span><span class="p">)</span>
+<span class="n">valid_accur</span> <span class="o">=</span> <span class="n">model</span><span class="o">.</span><span class="n">score</span><span class="p">(</span><span class="n">Xv</span><span class="p">,</span> <span class="n">Yv</span><span class="p">)</span></code></pre></figure>
+
+<p>I used my own functions for splitting the data because I wanted to feed it the exact same train, validation, and test sets. But will definitely explore scikit’s train_test_split() in the future.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">train_accur</span>
+<span class="mf">0.8433630952380953</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">valid_accur</span>
+<span class="mf">0.8404761904761905</span></code></pre></figure>
+
+<p>It has a lower accuracy than the model we wrote from scratch. However, it produced a model in less than a minute. I trained the model I wrote for about 15 minutes for 6000 iterations, which is quite costly as I trained it several times before finding the best hyperparameters.</p>
+
+<h2 id="conclusion">Conclusion</h2>
+<p>The one-vs-all logistic regression is a better multiclass model than I originally thought it would be. In fact, with the model I wrote from scratch, when I first ran it with alpha = 0.01 and 1000 iterations, it had an accuracy of 84%.</p>
+
+<p>Scikit learn has a huge library of machine learning algorithms that is worth learning. Acquiring high accuracy requires a good understanding of the tools in this library and how to tweak and evaluate the performance of the models.</p>
+
+<p>Finally, I used the trained model on the Kaggle test set and got a score of 0.91371. This is further confirmation that the model was not overfitted as it closely resembles the accuracy on the validation data.</p>
+
+<p><strong>Footnotes</strong></p>
+
+<p><b id="f1">1</b>Have you ever left your computer on overnight to read in large datasets? Or started making a phylogenetic tree at work and wonder when it’s going to finish so you can pack your laptop and go home? Yea. Silent and slow programs are awful because they can take up to hours to complete and you’ve committed so many hours that you don’t want to terminate it but deep down inside you can’t help but suspect it’s actually crashed and died or an error message is going to pop up anytime. So do yourself a favour, put in a print statement if you think it’s going to take a while, and always look for VERBOSE options when using programs.<a href="#a1">↩</a></p>
+
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/2018-03-30/scifi1" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/2018-03-04/tictactoe" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+      <span>
+        &copy; <time datetime="2018-05-03 04:47:54 -0400">2018</time> Suan Chin Yeo. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme. Icons made by <a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>
+      </span>
+    </footer>
+  </body>
+</html>

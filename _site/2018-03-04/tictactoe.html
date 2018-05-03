@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      How to: The Impossible TicTacToe Game &middot; suanchinyeo
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <!-- Begin Jekyll SEO tag v2.4.0 -->
+<title>How to: The Impossible TicTacToe Game | suanchinyeo</title>
+<meta name="generator" content="Jekyll v3.7.3" />
+<meta property="og:title" content="How to: The Impossible TicTacToe Game" />
+<meta name="author" content="Suan Chin Yeo" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="I built a TicTacToe game for fun and thought I would write a simple how-to guide." />
+<meta property="og:description" content="I built a TicTacToe game for fun and thought I would write a simple how-to guide." />
+<link rel="canonical" href="http://localhost:4000/2018-03-04/tictactoe" />
+<meta property="og:url" content="http://localhost:4000/2018-03-04/tictactoe" />
+<meta property="og:site_name" content="suanchinyeo" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-03-04T00:00:00-05:00" />
+<script type="application/ld+json">
+{"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2018-03-04/tictactoe"},"author":{"@type":"Person","name":"Suan Chin Yeo"},"description":"I built a TicTacToe game for fun and thought I would write a simple how-to guide.","@type":"BlogPosting","headline":"How to: The Impossible TicTacToe Game","dateModified":"2018-03-04T00:00:00-05:00","datePublished":"2018-03-04T00:00:00-05:00","url":"http://localhost:4000/2018-03-04/tictactoe","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+
+  <body>
+    <nav class="nav">
+      <div class="nav-container">
+        <a href="/">
+          <h2 class="nav-title">suanchinyeo</h2>
+        </a>
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/">Posts</a></li>
+        </ul>
+    </div>
+  </nav>
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Suan Chin Yeo
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2018-03-04 00:00:00 -0500">March 04, 2018</time>
+    
+  </div>
+
+  <h1 class="post-title">How to: The Impossible TicTacToe Game</h1>
+  <div class="post-line"></div>
+
+  <p>I built a <a href="https://github.com/suanchinyeo/projects">TicTacToe game</a> for fun and thought I would write a simple how-to guide.</p>
+
+<p>If you’re new to programming and haven’t written a project of this size, it may seem very difficult to go from a blank script to a whole game. But if you already know a coding language, you can absolutely do it.</p>
+
+<video src="https://suanchinyeo.github.io/assets/tictactoe.mp4" width="638" height="354" controls="" preload=""></video>
+
+<p>Excuse the silent film and awkward pauses here and there. I tapped into my inner movie making genius and did not find much.</p>
+
+<p>So let’s start!</p>
+
+<h2 id="the-planning-stage">The planning stage</h2>
+
+<p>We must always start with a plan. The more you plan, the less time you spend trying to make things work. For this stage, I like to write down anything that comes to mind on a piece of paper. I then identify key functionalities the code has to achieve and think of a way to best organize it. Sometimes, I do this while watching a tv show and would even go as far as to write the code on paper<sup id="a1"><a href="#f1">1</a></sup>.</p>
+
+<p>If you do this, you may end up with scribbles resembling this mess:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">game board
+function that checks for winner/tie
+players
+players should have a character "x" or "o" they can play
+an interface for the user
+human player
+computer player
+an algorithm for computer player to play
+Main game loop:
+while game is not over:
+	player1 plays
+	if game is not over:
+		player2 plays
+if there is a winner:
+	print Congratulations winner!
+else:
+	print Game Over! It's a tie!
+Optional: ask if user would like to play another game.</code></pre></figure>
+
+<p>But this is good! Now circle the things that can be grouped together, see if anything is redundant, highlight the key functionalities you need to write. And you may have an organization resembling this:</p>
+
+<p><strong>class Player()</strong><br /></p>
+<ul>
+  <li>Character (data)</li>
+  <li>Name (data)</li>
+</ul>
+
+<p><strong>class Human(Player)</strong><br /></p>
+<ul>
+  <li>Play (method)</li>
+</ul>
+
+<p><strong>class Computer(Player)</strong><br /></p>
+<ul>
+  <li>Play (method)</li>
+</ul>
+
+<p><strong>class Game()</strong><br /></p>
+<ul>
+  <li>Board (data)</li>
+  <li>Winner (data)</li>
+  <li>isOver (method)</li>
+  <li>getPlayers (method)</li>
+  <li>player1 (data)</li>
+  <li>player2 (data)</li>
+</ul>
+
+<p>This is a skeleton to build our game on. We can go ahead and set up these classes and then start writing code for them in small sections. If you feel confused about what to include or how to implement an idea, just write down everything you think you have to set up for this section and go through the same process of organizing them.</p>
+
+<h2 id="class-game">class Game()</h2>
+<h3 id="board">Board</h3>
+
+<p>What abstraction is best for the tictactoe board and pieces? In considering this problem, I happened upon <a href="https://pybit.es/codechallenge12.html">PyBites’ TicTacToe challenge</a>. They suggested using the following to represent the board:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">1 2 3
+4 5 6
+7 8 9</code></pre></figure>
+
+<p>And I thought it was a great idea to represent the board as a number pad! It’s a well known pattern so the user would not have to learn a new system. It would be very convenient for me to use an abstraction that can easily map the user’s input to update the <code class="highlighter-rouge">Game()</code>’s <code class="highlighter-rouge">Board</code>. For this reason, I chose to use the dictionary data structure. The keys will be numbers 1-9, representing the cells, and they will contain the contents of the cells. If we start the board with each cell assigned <code class="highlighter-rouge">False</code>, it may make our lives easier when we’re trying to determine if a cell is empty later on. So, thus far we have:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">Game</span><span class="p">():</span>
+	<span class="s">""" 
+	Game should be able to do the following:
+	0. Start game.
+	1. Get players. 2 players are needed for each game, they can be human or computer.
+	2. Determines if game is won.
+	3. Determines winner.
+	"""</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="s">"""
+		Game has following objects:
+		1. 3x3 board. This is represented in the following way:
+				1 2 3
+				4 5 6
+				7 8 9 
+		2. Players: player1 and player2.
+		4. Winner: player1 or player 2 or None (tie/game is not yet over).
+		"""</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">board</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span><span class="bp">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)}</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">player1</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">player2</span> <span class="o">=</span> <span class="bp">None</span></code></pre></figure>
+
+<p>This would be a good time to write a method for the <code class="highlighter-rouge">Game()</code> class that will allow us to print the board. Mine is nothing fancy, it literally is just the number pad as I showed above. But you can make this look very polished with boxes or the classic hash design if you have some talent with doing text-based art. But just the number pad by itself is very playable (I’ve tested it on people).</p>
+
+<h2 id="players">Players</h2>
+
+<p>Let’s set up our human players so we are able to test our code as we go along. You can do whatever you like as long as it works. You don’t even have to do <code class="highlighter-rouge">o</code> and <code class="highlighter-rouge">x</code> for your pieces. Aim for an easy and simple interface. Test your code to make sure everything works!</p>
+
+<p>Here’s the structure I used:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">Game</span><span class="p">():</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">player1</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">player2</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">getPlayers</span><span class="p">()</span>
+	<span class="k">def</span> <span class="nf">getPlayers</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="s">"""
+		Prompts user to set player1 and 2 as either human or computer.
+		Enter h or H or any string containing H to play as human.
+		Leave blank for Computer.
+		Creates the right type of player and assigns it to player 1 or 2.
+		"""</span>
+<span class="k">class</span> <span class="nc">Player</span><span class="p">():</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Game</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+		<span class="s">"""
+		Player has the following objects:
+		Game: a Game object it is playing.
+		Name: just for instructions and announcing winner.
+		Char: this is the piece the player plays with. "x" or "o".
+		Num: 1 or 2. Player1 or Player2 in self.game.
+		"""</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">game</span> <span class="o">=</span> <span class="n">Game</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">Num</span> <span class="o">=</span> <span class="n">n</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">char</span> <span class="o">=</span> <span class="bp">None</span>
+<span class="k">class</span> <span class="nc">Human</span><span class="p">(</span><span class="n">Player</span><span class="p">):</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Game</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+		<span class="n">Player</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Game</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setName</span><span class="p">()</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">char</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setChar</span><span class="p">()</span>
+	<span class="k">def</span> <span class="nf">setChar</span><span class="p">():</span>
+		<span class="s">"""
+		If human player is player1, gets to choose between "o" or "x".
+		If human player is player2, gets the leftover piece, and is informed of what
+		that is.
+		"""</span>
+	<span class="k">def</span> <span class="nf">setName</span><span class="p">():</span>
+		<span class="s">"""
+		Ask for name.
+		"""</span>
+<span class="k">class</span> <span class="nc">Computer</span><span class="p">(</span><span class="n">Player</span><span class="p">):</span>
+	<span class="s">"""
+	Computer player. Like human player but makes best move available. Never loses.
+	unlike human player, has self.opponent. So it is aware of its opponent's moves.
+	"""</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Game</span><span class="p">,</span> <span class="n">n</span><span class="p">):</span>
+		<span class="n">Player</span><span class="o">.</span><span class="n">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">Game</span><span class="p">,</span> <span class="n">n</span><span class="p">)</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">Num</span> <span class="o">==</span> <span class="mi">1</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">"player1"</span>
+		<span class="k">elif</span> <span class="bp">self</span><span class="o">.</span><span class="n">Num</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">name</span> <span class="o">=</span> <span class="s">"player2"</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">opponent</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getOpponent</span><span class="p">()</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">char</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">setChar</span><span class="p">()</span>
+	<span class="k">def</span> <span class="nf">setChar</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="s">""" 
+		Due to lack of creativity, computer always picks "x" if given first choice.
+		Else it will take leftover piece.
+		"""</span>
+	<span class="k">def</span> <span class="nf">getOpponent</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="s">""" 
+		Gets the opponent.
+		If player1 is a computer and player2 has not been assigned, there's a line
+		in Game()'s getPlayers() method that calls this method again for player1 after
+		the player2 has been assigned.
+		"""</span></code></pre></figure>
+
+<p>We can now write a <code class="highlighter-rouge">play()</code> function for our <code class="highlighter-rouge">Human(Player)</code>. This again, can be done however you like as long as it works and is maintainable.</p>
+
+<p>I did it this way:</p>
+<ul>
+  <li>Write an <code class="highlighter-rouge">updateBoard(location, character)</code> method for <code class="highlighter-rouge">Game()</code> that will update the <code class="highlighter-rouge">board</code> object by placing the character in the location specified. The advantage of doing this is that our <code class="highlighter-rouge">Computer(Player)</code> can use the same method to play.</li>
+  <li>In <code class="highlighter-rouge">Human(Player)</code>’s <code class="highlighter-rouge">play()</code> method, it informs the player that it’s their turn, and reminds them what their character is<sup id="a2"><a href="#f2">2</a></sup>. It then prints the current board and prompts the player to enter the number of the cell they would like to play. If it’s not a valid move, it’ll prompt for another number until it is valid. Once a valid number is obtained, it calls <code class="highlighter-rouge">self.game.updateBoard(input, self.char)</code>. That updates the board and the human has played!</li>
+</ul>
+
+<h2 id="isover">IsOver()</h2>
+
+<p>Forget about the <code class="highlighter-rouge">Computer(Player)</code> for now. Let’s write the function that will determine if our game is over. Because this is such a simple game, the number of solutions to the game is very small, in fact, there are only 8 possible winning solutions:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown"><span class="p">[</span><span class="nv">1, 2, 3</span><span class="p">]</span>, <span class="p">[</span><span class="nv">4, 5, 6</span><span class="p">]</span>, <span class="p">[</span><span class="nv">7, 8, 9</span><span class="p">]</span>, <span class="p">[</span><span class="nv">1, 4, 7</span><span class="p">]</span>, <span class="p">[</span><span class="nv">2, 5, 8</span><span class="p">]</span>, <span class="p">[</span><span class="nv">3, 6, 9</span><span class="p">]</span>, <span class="p">[</span><span class="nv">1, 5, 9</span><span class="p">]</span>, <span class="p">[</span><span class="nv">3, 5, 7</span><span class="p">]</span></code></pre></figure>
+
+<p>For our game, let’s consider a game over if:</p>
+<ul>
+  <li>A player has 3 pieces in a line (the possible lines listed above)</li>
+  <li>Neither player has a chance at winning. e.g. a line is considered a possible winning solution for player1 if player2 has not played in that line.</li>
+</ul>
+
+<p>Thus, we just have to check each solution. If, for a solution, a player has filled all 3 positions with its piece, a winner is found and game is over. If both players have played in a single solution, that solution is no longer a possible winning solution for either players and can be removed from the list of possible solutions. By the time we finish, if there are no solutions left, game is over and it’s a tie! While we’re running this method after every move, we might as well assign a <code class="highlighter-rouge">solution</code> to the <code class="highlighter-rouge">Game()</code> class and update it so we don’t do unnecessary calculations.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">Game</span><span class="p">():</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">board</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span><span class="bp">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)}</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">player1</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">player2</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">solution</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> 
+						 <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">7</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> 
+						 <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">getPlayers</span><span class="p">()</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">winner</span> <span class="o">=</span> <span class="bp">None</span>
+	<span class="k">def</span> <span class="nf">isOver</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="s">"""
+		If game is over and there is a winner, updates winner and returns True.
+		If game is not there is no winner, returns True.
+		If game is not over, updates solution by removing the solutions that are no longer
+		possible for either player.
+		"""</span>
+		<span class="n">solution</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">solution</span><span class="p">[:]</span>
+		<span class="n">board</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">getBoard</span><span class="p">()</span>
+		<span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">solution</span><span class="p">[:]:</span>
+			<span class="n">p1</span> <span class="o">=</span> <span class="mi">0</span>
+			<span class="n">p2</span> <span class="o">=</span> <span class="mi">0</span>
+			<span class="k">for</span> <span class="n">c</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">i</span><span class="p">)):</span>
+				<span class="k">if</span> <span class="n">board</span><span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="n">c</span><span class="p">]]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">player1</span><span class="o">.</span><span class="n">getChar</span><span class="p">():</span>
+					<span class="n">p1</span> <span class="o">+=</span> <span class="mi">1</span>
+				<span class="k">if</span> <span class="n">board</span><span class="p">[</span><span class="n">i</span><span class="p">[</span><span class="n">c</span><span class="p">]]</span> <span class="o">==</span> <span class="bp">self</span><span class="o">.</span><span class="n">player2</span><span class="o">.</span><span class="n">getChar</span><span class="p">():</span>
+					<span class="n">p2</span> <span class="o">+=</span> <span class="mi">1</span>
+			<span class="k">if</span> <span class="n">p1</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">winner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">player1</span>
+				<span class="k">return</span> <span class="bp">True</span>
+			<span class="k">if</span> <span class="n">p2</span> <span class="o">==</span> <span class="mi">3</span><span class="p">:</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">winner</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">player2</span>
+				<span class="k">return</span> <span class="bp">True</span>
+			<span class="k">if</span> <span class="n">p1</span> <span class="o">!=</span> <span class="mi">0</span> <span class="ow">and</span> <span class="n">p2</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">:</span>
+				<span class="n">solution</span><span class="o">.</span><span class="n">remove</span><span class="p">(</span><span class="n">i</span><span class="p">)</span>
+		<span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">solution</span><span class="p">)</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+			<span class="k">return</span> <span class="bp">True</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">solution</span> <span class="o">=</span> <span class="n">solution</span></code></pre></figure>
+
+<p>Now that we have this, let’s get back to our original goal. We can now write a <code class="highlighter-rouge">play()</code> method for our <code class="highlighter-rouge">Game()</code> object. Just as we had planned.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">play</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="s">"""
+		Player1 plays first, then player2.
+		When game is over, announces winner or tie.
+		"""</span>
+		<span class="k">while</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isOver</span><span class="p">():</span>
+			<span class="bp">self</span><span class="o">.</span><span class="n">player1</span><span class="o">.</span><span class="n">play</span><span class="p">()</span>
+			<span class="k">if</span> <span class="ow">not</span> <span class="bp">self</span><span class="o">.</span><span class="n">isOver</span><span class="p">():</span>
+				<span class="bp">self</span><span class="o">.</span><span class="n">player2</span><span class="o">.</span><span class="n">play</span><span class="p">()</span>
+		<span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">winner</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+			<span class="k">print</span><span class="p">(</span><span class="s">"Game Over! It's a tie."</span><span class="p">)</span>
+			<span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+		<span class="k">else</span><span class="p">:</span>
+			<span class="k">print</span><span class="p">(</span><span class="s">"Congratulations! "</span><span class="o">+</span><span class="bp">self</span><span class="o">.</span><span class="n">winner</span><span class="o">.</span><span class="n">getName</span><span class="p">()</span><span class="o">+</span><span class="s">" has won!"</span><span class="p">)</span>
+			<span class="k">print</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span></code></pre></figure>
+
+<p>We can add this method to <code class="highlighter-rouge">Game()</code>’s <code class="highlighter-rouge">__init__()</code> method.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">class</span> <span class="nc">Game</span><span class="p">():</span>
+	<span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">board</span> <span class="o">=</span> <span class="p">{</span><span class="n">i</span><span class="p">:</span><span class="bp">False</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">1</span><span class="p">,</span> <span class="mi">10</span><span class="p">)}</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">player1</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">player2</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">solution</span> <span class="o">=</span> <span class="p">[[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">2</span><span class="p">,</span> <span class="mi">3</span><span class="p">],</span> <span class="p">[</span><span class="mi">4</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">6</span><span class="p">],</span> <span class="p">[</span><span class="mi">7</span><span class="p">,</span> <span class="mi">8</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> 
+						 <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">4</span><span class="p">,</span> <span class="mi">7</span><span class="p">],</span> <span class="p">[</span><span class="mi">2</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">8</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">6</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> 
+						 <span class="p">[</span><span class="mi">1</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">9</span><span class="p">],</span> <span class="p">[</span><span class="mi">3</span><span class="p">,</span> <span class="mi">5</span><span class="p">,</span> <span class="mi">7</span><span class="p">]]</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">getPlayers</span><span class="p">()</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">winner</span> <span class="o">=</span> <span class="bp">None</span>
+		<span class="bp">self</span><span class="o">.</span><span class="n">play</span><span class="p">()</span></code></pre></figure>
+
+<p>Some quick notes on testing and troubleshooting. IDLE and Terminal are able to run python code that asks for user input. Some IDE’s aren’t, so do a quick check for yours before you waste too much time wondering why your code isn’t working. If your IDE of choice doesn’t take user input, you can code in your IDE of choice and test in Terminal. I prefer this to testing in IDLE, because IDLE opens the file again and then it’s tempting to make changes to the file opened in IDLE instead of the one in the IDE … it’s just a whole mess you can avoid by testing in Terminal.</p>
+
+<p>To run your script in the terminal, type <code class="highlighter-rouge">Game()</code> at the bottom of the script. And open Terminal and navigate to the folder where your tictactoe.py is saved:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">$ cd <span class="nt">&lt;insert</span> <span class="na">path</span> <span class="na">for</span> <span class="na">file</span> <span class="na">here</span><span class="nt">&gt;</span></code></pre></figure>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">$ python tictactoe.py</code></pre></figure>
+
+<p>If you do test in Terminal, your user inputs must be quoted like a string: “H”, for example. Otherwise it will not be read correctly. Inputs do not have to be quoted in IDLE.</p>
+
+<p>At this stage you should be able to play human against human and the program should be able to detect a winner or a tie. I haven’t showed all my code here, only explained what needs to be done for the program to work. So ensure you have all the working parts needed for your code. You can take a look at <a href="https://github.com/suanchinyeo/projects">my entire game</a> which I also linked at the beginning of the article.</p>
+
+<p>Once you’ve got everything working, congratulations! You have a working human vs. human TicTacToe game!</p>
+
+<h3 id="computerplayer">Computer(Player)</h3>
+
+<p>Now, we are at our final step, which is to make a <code class="highlighter-rouge">Computer(Player)</code> that will win if given any opportunity to do so. This player makes this TicTacToe into an impossible game, because if played against the Computer, regardless of who plays first, only the Computer has a chance of winning.</p>
+
+<p>There are a lot of algorithms available to write an unbeatable TicTacToe player. However, you don’t actually need them because you <em>are</em> an unbeatable TicTacToe player yourself! So, you already an algorithm for being unbeatable, now all we have to do is to write that down for our <code class="highlighter-rouge">Computer(Player)</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">play</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+		<span class="s">"""
+		Computer plays by following these instructions:
+		1. If computer has a possible win within 1 move, it will make that move.
+		2. If 1. is not true, and opponent has possible win within 1 move, it will block that win.
+		3. If neither 1 nor 2 is true, computer will look at its possible solutions (the solutions
+		in which its opponents have yet to play), and pick the cell that appears in the most
+		possible solutions.
+		4. If none of the above is true, it will pick a random empty cell.
+		"""</span></code></pre></figure>
+
+<p>Think about how this can be implemented or if you have a better winning strategy. The idea is very similar to how we determine if the game <code class="highlighter-rouge">isOver()</code>. We just search through the solutions and if Computer has a chance at winning (its opponent hasn’t played in this solution), we count how many pieces Computer has played. If it is 2, play the remaining piece. If not, we can record this cell number and add 1 to its score as it contributes to a possible winning solution. Then we look at the solutions where the opponent has a chance at winning (Computer has not played in these solutions). If the opponent has played 2 pieces in a solution, we play the remaining cell to block a win. Otherwise, we go back to the record of cells and their scores and play the cell with the highest score. If every cell scored 0, we just pick a random empty cell.</p>
+
+<p>Test this code by playing it several times with several different moves. Does the computer know to win if you let it win? Does it always thwart you? Does it throw up error messages when it no longer has good moves?</p>
+
+<p>And we’re done!</p>
+
+<center>Footnotes</center>
+
+<p><b id="f1">1</b> The same principle applies to writing essays, if you have a 10 page essay assignment, spend time thinking about what you would like to write while doing everyday tasks. That way, by the time you sit down in front of a computer, you have a fairly good idea of how it should be organized and will write much faster.<a href="#a1">↩</a></p>
+
+<p><b id="f2">2</b> You will find this is necessary after a few test runs, you won’t be able to remember whether you chose <code class="highlighter-rouge">x</code> or <code class="highlighter-rouge">o</code>. <a href="#a2">↩</a></p>
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/2018-03-16/mnist1" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/2018-02-20/full-moon" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+      <span>
+        &copy; <time datetime="2018-05-03 04:47:54 -0400">2018</time> Suan Chin Yeo. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme. Icons made by <a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>
+      </span>
+    </footer>
+  </body>
+</html>

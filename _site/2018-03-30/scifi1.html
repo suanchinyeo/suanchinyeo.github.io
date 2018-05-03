@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Authorship Prediction in Sci-Fi Literature Part I: Data Collection, Cleaning, and Assembly in R &middot; suanchinyeo
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <!-- Begin Jekyll SEO tag v2.4.0 -->
+<title>Authorship Prediction in Sci-Fi Literature Part I: Data Collection, Cleaning, and Assembly in R | suanchinyeo</title>
+<meta name="generator" content="Jekyll v3.7.3" />
+<meta property="og:title" content="Authorship Prediction in Sci-Fi Literature Part I: Data Collection, Cleaning, and Assembly in R" />
+<meta name="author" content="Suan Chin Yeo" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="This is part 1 of a series of posts on my new project: identify authors of sentences from science fiction books. In this part I’ll be writing about how I went about acquiring the main requirement of a machine learning task: data. The finished datset can be accessed here." />
+<meta property="og:description" content="This is part 1 of a series of posts on my new project: identify authors of sentences from science fiction books. In this part I’ll be writing about how I went about acquiring the main requirement of a machine learning task: data. The finished datset can be accessed here." />
+<link rel="canonical" href="http://localhost:4000/2018-03-30/scifi1" />
+<meta property="og:url" content="http://localhost:4000/2018-03-30/scifi1" />
+<meta property="og:site_name" content="suanchinyeo" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-03-30T00:00:00-04:00" />
+<script type="application/ld+json">
+{"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2018-03-30/scifi1"},"author":{"@type":"Person","name":"Suan Chin Yeo"},"description":"This is part 1 of a series of posts on my new project: identify authors of sentences from science fiction books. In this part I’ll be writing about how I went about acquiring the main requirement of a machine learning task: data. The finished datset can be accessed here.","@type":"BlogPosting","headline":"Authorship Prediction in Sci-Fi Literature Part I: Data Collection, Cleaning, and Assembly in R","dateModified":"2018-03-30T00:00:00-04:00","datePublished":"2018-03-30T00:00:00-04:00","url":"http://localhost:4000/2018-03-30/scifi1","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+
+  <body>
+    <nav class="nav">
+      <div class="nav-container">
+        <a href="/">
+          <h2 class="nav-title">suanchinyeo</h2>
+        </a>
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/">Posts</a></li>
+        </ul>
+    </div>
+  </nav>
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Suan Chin Yeo
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2018-03-30 00:00:00 -0400">March 30, 2018</time>
+    
+  </div>
+
+  <h1 class="post-title">Authorship Prediction in Sci-Fi Literature Part I: Data Collection, Cleaning, and Assembly in R</h1>
+  <div class="post-line"></div>
+
+  <p>This is part 1 of a series of posts on my new project: identify authors of sentences from science fiction books. In this part I’ll be writing about how I went about acquiring the main requirement of a machine learning task: data. The finished datset can be accessed <a href="https://github.com/suanchinyeo/projects/tree/master/scifi_authors">here</a>.</p>
+
+<h2 id="acquiring-data">Acquiring Data</h2>
+
+<p>In the best case scenario, I would like to finish this task with data looking something like this:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">author</span><span class="w">   </span><span class="n">sentence</span><span class="w">
+</span><span class="n">JV</span><span class="w">       </span><span class="n">some</span><span class="w"> </span><span class="n">sentence.</span><span class="w">
+</span><span class="n">IA</span><span class="w">       </span><span class="n">some</span><span class="w"> </span><span class="n">other</span><span class="w"> </span><span class="n">sentence.</span><span class="w">
+</span><span class="n">HGW</span><span class="w">      </span><span class="n">another</span><span class="w"> </span><span class="n">sentence.</span><span class="w">
+</span><span class="n">AH</span><span class="w">       </span><span class="n">every</span><span class="w"> </span><span class="n">sentence.</span></code></pre></figure>
+
+<p>Where <code class="highlighter-rouge">JV = Jules Verne</code>, <code class="highlighter-rouge">IA = Isaac Asimov</code>, <code class="highlighter-rouge">HGW = H.G.Wells</code>, and <code class="highlighter-rouge">AH = Aldous Huxley</code>.</p>
+
+<p>Surprisingly, however, most of Asimov’s and Huxley’s writings are not yet in the public domain (it takes quite a bit of work to get this data, would be nice if everyone gets to use them). So I replaced them with authors I am planning to read in the future: Edgar Rice Burroughs, and Phillip K. Dick.</p>
+
+<p>Project Gutenberg is the perfect source of data for this project for the following reasons:</p>
+<ul>
+  <li>Everything here is free and in the public domain.</li>
+  <li>It’s very nice to get everything from one source. Merging data from different sources can be done but is not trivial.</li>
+  <li>They host books in multiple formats, including the convenient <code class="highlighter-rouge">.txt</code> format I am after.</li>
+</ul>
+
+<p>Here are the files I downloaded and the number of sentences I was able to harvest from them:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">               file                                                                         book sentences
+1  ./books/erb1.txt   The Project Gutenberg EBook of A Princess of Mars, by Edgar Rice Burroughs      1966
+2  ./books/erb2.txt       Project Gutenberg's The Land That Time Forgot, by Edgar Rice Burroughs      1510
+3  ./books/erb3.txt   The Project Gutenberg EBook of The Lost Continent, by Edgar Rice Burroughs      1593
+4  ./books/erb4.txt           The Project Gutenberg EBook of Pellucidar, by Edgar Rice Burroughs      2460
+5  ./books/erb5.txt     The Project Gutenberg EBook of The Gods of Mars, by Edgar Rice Burroughs      3413
+6  ./books/erb6.txt      The Project Gutenberg EBook of Warlord of Mars, by Edgar Rice Burroughs      1768
+7  ./books/erb7.txt The Project Gutenberg EBook of Thuvia, Maid of Mars, by Edgar Rice Burroughs      2412
+8  ./books/erb8.txt The Project Gutenberg EBook of The Chessmen of Mars, by Edgar Rice Burroughs      3653
+9  ./books/erb9.txt     Project Gutenberg's The People that Time Forgot, by Edgar Rice Burroughs      1267
+10 ./books/hgw1.txt                                                                                   1691
+11 ./books/hgw2.txt         The Project Gutenberg EBook of The War of the Worlds, by H. G. Wells      2702
+12 ./books/hgw3.txt   The Project Gutenberg EBook of The Island of Doctor Moreau, by H. G. Wells      1729
+13 ./books/hgw4.txt             The Project Gutenberg EBook of The Invisible Man, by H. G. Wells      3160
+14 ./books/hgw5.txt                  The Project Gutenberg EBook of The Red Room, by H. G. Wells       184
+15 ./books/hgw6.txt          Project Gutenberg"s When the Sleeper Wakes, by Herbert George Wells      5160
+16 ./books/hgw7.txt   The Project Gutenberg EBook of The World Set Free, by Herbert George Wells      2585
+17 ./books/hgw8.txt     The Project Gutenberg EBook of The First Men In The Moon, by H. G. Wells      3536
+18  ./books/jv1.txt   The Project Gutenberg EBook of Around the World in 80 Days, by Jules Verne      3279
+19  ./books/jv2.txt     Project Gutenberg's A Journey to the Centre of the Earth, by Jules Verne      4412
+20  ./books/jv3.txt         The Project Gutenberg Etext of 20000 Leagues Under the Seas by Jules      6530
+21  ./books/jv4.txt           The Project Gutenberg EBook of All Around the Moon, by Jules Verne      4319
+22 ./books/pkd1.txt        The Project Gutenberg EBook of Second Variety, by Philip Kindred Dick      1863
+23 ./books/pkd2.txt       The Project Gutenberg EBook of The Hanging Stranger, by Philip K. Dick       655
+24 ./books/pkd3.txt           The Project Gutenberg EBook of The Variable Man, by Philip K. Dick      2503
+25 ./books/pkd4.txt              The Project Gutenberg EBook of Mr. Spaceship, by Philip K. Dick      1069</code></pre></figure>
+
+<p>The one that’s missing is H. G. Well’s Time Machine. This metadata was generated by extracting the book title from a specific line in the text file, and that line wasn’t found in the Time Machine. The reality of data collection is that data is dirty, something we’ll encounter again and again in this project.</p>
+
+<h2 id="removing-smart-quotes">Removing smart quotes</h2>
+
+<p>Smart quotes are the bane of coding. If you don’t know what they are, they are these: <code class="highlighter-rouge">”“</code> or <code class="highlighter-rouge">’‘</code>. They break your program and it will take you forever to figure it out. One wonders how the world would be like if they were never created. If this is the first time you’re hearing of smart quotes, you can set your text editor and your Mac to turn it off in system preferences.</p>
+
+<p>Our problem here is that these smart quotes may appear in some text files and not others. This is a problem because our model will see these as different and separate features from <code class="highlighter-rouge">""</code>, when they should not be. Authors don’t decide whether or not to use smart quotes in their Gutenberg files, this is a result of idiosyncracies in formatting! Why did I have the foresight to catch this bug? I didn’t, I went ahead without considering them and had them show up after I had completed everything. So I went back and dealt with it.</p>
+
+<p>I found <a href="https://developmentality.wordpress.com/2010/10/11/how-to-remove-smart-quotes-from-a-text-file/">this excellent blog</a> that deals with this problem very simply with Unix. I highly recommend reading and employing this simple solution before progressing further even if you are not sure whether your files have smart quotes.</p>
+
+<h2 id="getting-the-main-text-of-the-book">Getting the main text of the book</h2>
+
+<p>From this section on we will be operating in R. Why R? Because I foresee quite a bit of trial and error. RStudio allows viewing of data without explicitly using the print command. This is going to a feature I will hate to lose if I progress too far in Python (I currently work in IDLE due to some technical difficulties/complications). RStudio is not the only reason to use R, after all, it allows coding in Python. The other reason is I used to do the majority of my bioinformatics work in R, which included a lot of data cleaning and string manipulation. In my mind, it works this way: R is easier when I’m not sure what I’m doing (exploratory work), Python is easier when I have a concrete plan I want to execute (high utility functions, reproducibility, machine learning work). So it’s a matter of convenience and habit.</p>
+
+<p>Books have a ton of information before getting to the actual story. From Gutenberg files, these are several things that may exist in a text file other than the main text of the book:</p>
+<ul>
+  <li>Gutenberg opening metadata (information about the file, the date of last update, etc.)</li>
+  <li>Index</li>
+  <li>Foreword (may be part of the story, or not)</li>
+  <li>Introduction (may be part of the story, or not)</li>
+  <li>Translator’s note</li>
+  <li>Chapter headings</li>
+  <li>Gutenberg closing information (guidelines/policies regarding distribution, etc.)</li>
+  <li>and more …</li>
+</ul>
+
+<p>Before we can even get sentences, we need to know that the sentence is <em>part of the story and written by the author</em>. These elements may all be present, or they may all be absent. We need two things: where the story begins, where the story ends.</p>
+
+<p>Yes, there is an obvious solution of opening every single file and manually removing the undesired components. This is most probably the cleanest solution. However, while I currently have 14 files and it will be extremely dull but doable, I’m hoping to find a way to do it programmatically.</p>
+
+<p>Mercifully, after looking at several of my files, it is fairly easy to find where the story ends:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">feet is a huge and hideous creature with a heart of gold.
+
+I believe that they are waiting there for me, and something tells me
+that I shall soon know.<span class="sb">
+
+
+
+
+
+
+
+
+
+</span>End of Project Gutenberg's A Princess of Mars, by Edgar Rice Burroughs
+
+<span class="gs">*** END OF THIS PROJECT GUTENBERG EBOOK A PRINCESS OF MARS **</span><span class="err">*</span>
+
+<span class="gs">****</span><span class="ge">* This file should be named 62.txt or 62.zip *</span><span class="gs">****</span>
+This and all associated files of various formats will be found in:
+        http://www.gutenberg.org/6/62/<span class="sb">
+
+
+
+</span>Updated editions will replace the previous one--the old editions
+will be renamed.</code></pre></figure>
+
+<p>Yup, that <code class="highlighter-rouge">End of Project Gutenberg's ... </code> line.</p>
+
+<p>So we can say:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">End</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">grep</span><span class="p">(</span><span class="s2">"^End of "</span><span class="p">,</span><span class="w"> </span><span class="n">book</span><span class="p">)</span><span class="w"> </span><span class="c1"># note that grep uses regex</span><span class="w">
+</span><span class="n">End</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">End</span><span class="p">[</span><span class="nf">length</span><span class="p">(</span><span class="n">End</span><span class="p">)]</span></code></pre></figure>
+
+<p>Why not <code class="highlighter-rouge">grep</code> a longer string? Because that failed. This line is not constant across the files and some files have variations including some that say <code class="highlighter-rouge">End of &lt;book title&gt;</code>. So to remedy this problem, we <code class="highlighter-rouge">grep</code> a very short string and use the last match found by <code class="highlighter-rouge">grep</code> to ensure we’re selecting the line we want.</p>
+
+<p>Now for a less elegant solution for finding the beginning of the main text. After pondering for a while, and trying a few different things (including trying to detect if a file has an introduction or not, only to realize some introductions <em>are</em> part of the story), a simple solution occured to me. If we separate the book into paragraphs (lines of texts separated by empty lines) and remove the first 20% of paragraphs, we would probably get rid of all of the unwanted content at the beginning. Yes, we would lose data, but we wouldn’t gain bad data.</p>
+
+<p>After playing with the percentages a little bit, here we are:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">getMainText</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">book</span><span class="p">){</span><span class="w">
+  </span><span class="c1"># book is a vector of words from a book</span><span class="w">
+  </span><span class="c1"># getMainText cuts off the first 15% of paragraphs</span><span class="w">
+  </span><span class="c1"># and the Project Gutenberg policies at the end</span><span class="w">
+  </span><span class="c1"># of the files.</span><span class="w">
+  </span><span class="n">whitespaces</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">grep</span><span class="p">(</span><span class="s2">"^$"</span><span class="p">,</span><span class="w"> </span><span class="n">book</span><span class="p">)</span><span class="w">
+  </span><span class="n">numOfParagraphs</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">length</span><span class="p">(</span><span class="n">whitespaces</span><span class="p">)</span><span class="w">
+  </span><span class="n">Beginning</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">as.integer</span><span class="p">(</span><span class="n">numOfParagraphs</span><span class="o">*</span><span class="m">0.15</span><span class="p">)</span><span class="w">
+  </span><span class="n">End</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">grep</span><span class="p">(</span><span class="s2">"^End of "</span><span class="p">,</span><span class="w"> </span><span class="n">book</span><span class="p">)</span><span class="w">
+  </span><span class="n">End</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">End</span><span class="p">[</span><span class="nf">length</span><span class="p">(</span><span class="n">End</span><span class="p">)]</span><span class="w">
+  </span><span class="nf">return</span><span class="p">(</span><span class="n">book</span><span class="p">[(</span><span class="n">whitespaces</span><span class="p">[</span><span class="n">Beginning</span><span class="p">]</span><span class="m">+1</span><span class="p">)</span><span class="o">:</span><span class="n">End</span><span class="m">-1</span><span class="p">])</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="n">text</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">readLines</span><span class="p">(</span><span class="s2">"pkd4.txt"</span><span class="p">)</span><span class="w">
+</span><span class="n">mainText</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getMainText</span><span class="p">(</span><span class="n">allText</span><span class="p">)</span></code></pre></figure>
+
+<p>Result:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="o">&gt;</span><span class="w"> </span><span class="n">text</span><span class="p">[</span><span class="m">1</span><span class="o">:</span><span class="m">10</span><span class="p">]</span><span class="w">
+ </span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="s2">"The Project Gutenberg EBook of Mr. Spaceship, by Philip K. Dick"</span><span class="w">
+ </span><span class="p">[</span><span class="m">2</span><span class="p">]</span><span class="w"> </span><span class="s2">""</span><span class="w">
+ </span><span class="p">[</span><span class="m">3</span><span class="p">]</span><span class="w"> </span><span class="s2">"This eBook is for the use of anyone anywhere at no cost and with"</span><span class="w">
+ </span><span class="p">[</span><span class="m">4</span><span class="p">]</span><span class="w"> </span><span class="s2">"almost no restrictions whatsoever.  You may copy it, give it away or"</span><span class="w">
+ </span><span class="p">[</span><span class="m">5</span><span class="p">]</span><span class="w"> </span><span class="s2">"re-use it under the terms of the Project Gutenberg License included"</span><span class="w"> 
+ </span><span class="p">[</span><span class="m">6</span><span class="p">]</span><span class="w"> </span><span class="s2">"with this eBook or online at www.gutenberg.net"</span><span class="w">
+ </span><span class="p">[</span><span class="m">7</span><span class="p">]</span><span class="w"> </span><span class="s2">""</span><span class="w">
+ </span><span class="p">[</span><span class="m">8</span><span class="p">]</span><span class="w"> </span><span class="s2">""</span><span class="w">
+ </span><span class="p">[</span><span class="m">9</span><span class="p">]</span><span class="w"> </span><span class="s2">"Title: Mr. Spaceship"</span><span class="w">
+</span><span class="p">[</span><span class="m">10</span><span class="p">]</span><span class="w"> </span><span class="s2">""</span><span class="w">
+</span><span class="o">&gt;</span><span class="w"> </span><span class="n">mainText</span><span class="p">[</span><span class="m">1</span><span class="o">:</span><span class="m">10</span><span class="p">]</span><span class="w">
+ </span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w"> </span><span class="s2">""</span><span class="w">
+ </span><span class="p">[</span><span class="m">2</span><span class="p">]</span><span class="w"> </span><span class="s2">"She turned toward him. \"I have an idea. Do you remember that professor"</span><span class="w"> 
+ </span><span class="p">[</span><span class="m">3</span><span class="p">]</span><span class="w"> </span><span class="s2">"we had in college. Michael Thomas?\""</span><span class="w">
+ </span><span class="p">[</span><span class="m">4</span><span class="p">]</span><span class="w"> </span><span class="s2">""</span><span class="w">
+ </span><span class="p">[</span><span class="m">5</span><span class="p">]</span><span class="w"> </span><span class="s2">"Kramer nodded."</span><span class="w">
+ </span><span class="p">[</span><span class="m">6</span><span class="p">]</span><span class="w"> </span><span class="s2">""</span><span class="w">
+ </span><span class="p">[</span><span class="m">7</span><span class="p">]</span><span class="w"> </span><span class="s2">"\"I wonder if he's still alive.\" Dolores frowned. \"If he is he must be"</span><span class="w">
+ </span><span class="p">[</span><span class="m">8</span><span class="p">]</span><span class="w"> </span><span class="s2">"awfully old.\""</span><span class="w">
+ </span><span class="p">[</span><span class="m">9</span><span class="p">]</span><span class="w"> </span><span class="s2">""</span><span class="w">
+</span><span class="p">[</span><span class="m">10</span><span class="p">]</span><span class="w"> </span><span class="s2">"\"Why, Dolores?\" Gross asked."</span></code></pre></figure>
+
+<p>So far so good. You can check what the first line is here to make sure you’ve picked a high enough percentage. Yes, it is slightly cheating since we’re making decisions on the fly rather than a programmed algorithm, but data work often requires active inspection and decision making.</p>
+
+<h2 id="getting-sentences-aka-regex-regex-regex">Getting sentences aka REGEX REGEX REGEX</h2>
+
+<p>I was really hoping to use a package for this. However, the package I had planned to use doesn’t have a version for my R.</p>
+
+<p>This task was, at the beginning, easier than I thought, and then later, harder than I thought. And the solution I arrived at hinged on one odd piece of knowledge: That older documents have <em>two white spaces</em> at the end of sentences instead of one.</p>
+
+<p>We also have the good fortune of Gutenberg not breaking up words at the end of a line with a hyphen.</p>
+
+<p>Essentially, what we need to do is this:</p>
+<ul>
+  <li>concatenate all the elements in <code class="highlighter-rouge">mainText</code> with a single white space between lines</li>
+  <li>split the resulting string by two whitespaces</li>
+</ul>
+
+<p>This actually worked beautifully with most of the files, but the newer ones only have a single white space at the end of sentences, and cannot be handled the same way. So I replaced all occurances of <code class="highlighter-rouge">. </code>, <code class="highlighter-rouge">? </code>, and <code class="highlighter-rouge">! </code> with <code class="highlighter-rouge">.  </code>, <code class="highlighter-rouge">?  </code>, and <code class="highlighter-rouge">!  </code> respectively. We use regex to specify that we only want to replace the ones with exactly one white space, not zero white space or more than one white space. We then throw out anything that does not contain at least a period, question mark, or exclamation mark. This hopefully gets rid of chapter headings, or other non-sentence fragments.</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">getSentences</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="k">function</span><span class="p">(</span><span class="n">mainText</span><span class="p">){</span><span class="w">
+  </span><span class="c1"># mainText is a vector of characters</span><span class="w">
+  </span><span class="c1"># returned from the function</span><span class="w">
+  </span><span class="c1"># getMainText</span><span class="w">
+  </span><span class="n">print</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">mainText</span><span class="p">))</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\.\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">){</span><span class="w">
+    </span><span class="n">mainText</span><span class="p">[</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\.\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">)]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gsub</span><span class="p">(</span><span class="s2">"\\.\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="s2">"\\.  "</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">[</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\.\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">)])</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\!\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">){</span><span class="w">
+    </span><span class="n">mainText</span><span class="p">[</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\!\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">)]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gsub</span><span class="p">(</span><span class="s2">"\\!\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="s2">"\\!  "</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">[</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\!\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">)])</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\?\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">){</span><span class="w">
+    </span><span class="n">mainText</span><span class="p">[</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\?\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">)]</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">gsub</span><span class="p">(</span><span class="s2">"\\?\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="s2">"\\?  "</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">[</span><span class="n">grep</span><span class="p">(</span><span class="s2">"\\?\\s{1}"</span><span class="p">,</span><span class="w"> </span><span class="n">mainText</span><span class="p">)])</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  
+  </span><span class="n">sentences</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">unlist</span><span class="p">(</span><span class="n">strsplit</span><span class="p">(</span><span class="n">paste</span><span class="p">(</span><span class="n">mainText</span><span class="p">,</span><span class="w"> </span><span class="n">collapse</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">" "</span><span class="p">),</span><span class="w"> </span><span class="s2">"  "</span><span class="p">))</span><span class="w">
+  
+ 
+  </span><span class="c1"># keep only strings that contain .!? </span><span class="w">
+  </span><span class="n">sentences</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sentences</span><span class="p">[</span><span class="n">grep</span><span class="p">(</span><span class="s2">"[\\.\\!\\?]"</span><span class="p">,</span><span class="w"> </span><span class="n">sentences</span><span class="p">)]</span><span class="w">
+  </span><span class="nf">return</span><span class="p">(</span><span class="n">sentences</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span></code></pre></figure>
+
+<h2 id="putting-it-all-together">Putting it all together</h2>
+
+<p>We now have everything we need to apply the functions above to all our books. The previous sections were hammered out using one book, looping through all the files will create some new problems for the first time (especially if you’re following along to make a similar dataset but with different books). But that’s ok, just go back and fix it (regex is your friend). This is because we are not cleaning web data, or something very structured. We are cleaning some text files that have been generated at different times by different people and contain different information at different locations. It is difficult to predict the types, locations, and degree of variation we will encounter. The problems that surfaced when I first looped through I have gone back and incorporated in the functions above.</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">allBooks</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">list.files</span><span class="p">(</span><span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"./books"</span><span class="p">,</span><span class="w"> </span><span class="n">pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">".txt$"</span><span class="p">,</span><span class="w"> </span><span class="n">full.names</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+
+</span><span class="n">firstSentences</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">character</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">allBooks</span><span class="p">))</span><span class="w">
+</span><span class="n">finalData</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">data.frame</span><span class="p">(</span><span class="n">author</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">character</span><span class="p">(</span><span class="m">0</span><span class="p">),</span><span class="w"> </span><span class="n">sentence</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">character</span><span class="p">(</span><span class="m">0</span><span class="p">))</span><span class="w">
+</span><span class="n">metaData</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">data.frame</span><span class="p">(</span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">character</span><span class="p">(</span><span class="m">0</span><span class="p">),</span><span class="w"> </span><span class="n">book</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">character</span><span class="p">(</span><span class="m">0</span><span class="p">),</span><span class="w"> </span><span class="n">sentences</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">numeric</span><span class="p">(</span><span class="m">0</span><span class="p">))</span><span class="w">
+</span><span class="n">authors</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"jv"</span><span class="p">,</span><span class="w"> </span><span class="s2">"erb"</span><span class="p">,</span><span class="w"> </span><span class="s2">"hgw"</span><span class="p">,</span><span class="w"> </span><span class="s2">"pkd"</span><span class="p">)</span><span class="w">
+
+</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="nf">length</span><span class="p">(</span><span class="n">allBooks</span><span class="p">)){</span><span class="w">
+  </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">a</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">authors</span><span class="p">){</span><span class="w">
+    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">grep</span><span class="p">(</span><span class="n">a</span><span class="p">,</span><span class="w"> </span><span class="n">allBooks</span><span class="p">[</span><span class="n">i</span><span class="p">]))</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">){</span><span class="w">
+      </span><span class="n">author</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">toupper</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w">
+      </span><span class="k">break</span><span class="w">
+    </span><span class="p">}</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="n">text</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">readLines</span><span class="p">(</span><span class="n">allBooks</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="w">
+  </span><span class="n">mainText</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getMainText</span><span class="p">(</span><span class="n">text</span><span class="p">)</span><span class="w">
+  </span><span class="n">file</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">allBooks</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w">
+  </span><span class="n">book</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">text</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
+  </span><span class="n">sentence</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">getSentences</span><span class="p">(</span><span class="n">mainText</span><span class="p">)</span><span class="w">
+  </span><span class="n">firstSentences</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sentence</span><span class="p">[</span><span class="m">1</span><span class="p">]</span><span class="w">
+  </span><span class="n">sentences</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">length</span><span class="p">(</span><span class="n">sentence</span><span class="p">)</span><span class="w">
+  </span><span class="n">mdf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">data.frame</span><span class="p">(</span><span class="n">file</span><span class="p">,</span><span class="w"> </span><span class="n">book</span><span class="p">,</span><span class="w"> </span><span class="n">sentences</span><span class="p">)</span><span class="w">
+  </span><span class="n">metaData</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rbind</span><span class="p">(</span><span class="n">metaData</span><span class="p">,</span><span class="w"> </span><span class="n">mdf</span><span class="p">)</span><span class="w">
+  </span><span class="n">df</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">makeIntoTable</span><span class="p">(</span><span class="n">sentence</span><span class="p">,</span><span class="w"> </span><span class="n">author</span><span class="p">)</span><span class="w">
+  </span><span class="n">finalData</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rbind</span><span class="p">(</span><span class="n">finalData</span><span class="p">,</span><span class="w"> </span><span class="n">df</span><span class="p">)</span><span class="w">
+</span><span class="p">}</span></code></pre></figure>
+
+<p>Print firstSentences and take a look. If they all pertain to the stories, you’re good, otherwise, increase the percentage in the <code class="highlighter-rouge">getMainText()</code> function. In hindsight, make the percentage a variable you can set while calling it.</p>
+
+<p>Here are twenty random sentences from the final dataset:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown"><span class="gt">&gt; random20$author</span>
+ <span class="p">[</span><span class="nv">1</span><span class="p">]</span> JV  JV  ERB ERB JV  HGW JV  JV  HGW JV  JV  ERB ERB HGW ERB JV  ERB JV  HGW ERB
+Levels: ERB HGW JV PKD
+<span class="gt">&gt; random20$sentence</span>
+ <span class="p">[</span><span class="nv">1</span><span class="p">]</span> What you can see, what anybody can see on a clear night when the Moon is full--only our friends had all the advantages of a closer view.
+ <span class="p">[</span><span class="nv">2</span><span class="p">]</span>  He did not know what to think.
+ <span class="p">[</span><span class="nv">3</span><span class="p">]</span> "What happened, Thirty-six?" I asked him.
+ <span class="p">[</span><span class="nv">4</span><span class="p">]</span>  There was the same short, stocky trunk upon which rested an enormous head habitually bent forward into the same curvature as the back, the arms shorter than the legs, and the lower leg considerably shorter than that of modern man, the knees bent forward and never straightened.
+ <span class="p">[</span><span class="nv">5</span><span class="p">]</span> Its fins set vertically, its propeller thrown in gear at the captain's signal, the Nautilus rose with lightning speed, shooting upward like an air balloon into the sky.
+ <span class="p">[</span><span class="nv">6</span><span class="p">]</span> "You."
+ <span class="p">[</span><span class="nv">7</span><span class="p">]</span>  The pilot swore an angry oath; the reward of two hundred pounds was evidently on the point of escaping him.
+ <span class="p">[</span><span class="nv">8</span><span class="p">]</span>  The solar rays easily crossed this aqueous mass and dispersed its dark colors. I could easily distinguish objects 100 meters away.
+ <span class="p">[</span><span class="nv">9</span><span class="p">]</span> The third and fourth stood beside him in the water, one perhaps two hundred yards from me, the other towards Laleham.
+<span class="p">[</span><span class="nv">10</span><span class="p">]</span>  Some pipes full of opium lay upon the table.
+<span class="p">[</span><span class="nv">11</span><span class="p">]</span> Now, the understanding was, that he was to take us to the village of Stapi, situated on the southern slope of the peninsula of Sneffels, at the very foot of the volcano.
+<span class="p">[</span><span class="nv">12</span><span class="p">]</span>  It would be futile to attempt to describe them to Earth men, since substance is the only thing which they possess in common with any creature of the past or present with which you are familiar--even their venom is of an unearthly virulence that, by comparison, would make the cobra de capello seem quite as harmless as an angleworm.
+<span class="p">[</span><span class="nv">13</span><span class="p">]</span> I could scarce restrain a smile at Perry's use of the pronoun "we," yet I was glad to share the rejoicing with him as I shall always be glad to share everything with the dear old fellow.
+<span class="p">[</span><span class="nv">14</span><span class="p">]</span> Up he drove and up, to that pulsating rhythm, until the country beneath was blue and indistinct, and London spread like a little map traced in light, like the mere model of a city near the brim of the horizon.
+<span class="p">[</span><span class="nv">15</span><span class="p">]</span>  With such as these I WOULD conquer one!
+<span class="p">[</span><span class="nv">16</span><span class="p">]</span> His silence, of course, did not last long.
+<span class="p">[</span><span class="nv">17</span><span class="p">]</span> Again I climbed to the ship's rail.
+<span class="p">[</span><span class="nv">18</span><span class="p">]</span> I stood stupefied.
+<span class="p">[</span><span class="nv">19</span><span class="p">]</span> Somehow, his manner made me feel ashamed of myself.
+<span class="p">[</span><span class="nv">20</span><span class="p">]</span>  They ranged in height from three to four feet, and were moving restlessly about the enclosure as though searching for food.
+64263 Levels:  "Another enemy to harass me in my misery?" ...</code></pre></figure>
+
+<p>You can see some of these are more than one sentence. But it is hard to tell what bug caused it to be that way. And since we harvested about 68k sentences, it’s perhaps harder to identify the ones that need to be further split into proper sentences.</p>
+
+<p>However since everything is processed the same way, we can ensure that similar structures will be split similarly. Thus, we maintain consistency across the data.</p>
+
+<p>That’s all for this post. Again, you can find the dataset generated here: <a href="https://github.com/suanchinyeo/projects/tree/master/scifi_authors">click</a>.</p>
+
+
+</div>
+
+<div class="pagination">
+  
+  
+    <a href="/2018-03-16/mnist1" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+      <span>
+        &copy; <time datetime="2018-05-03 04:47:54 -0400">2018</time> Suan Chin Yeo. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme. Icons made by <a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>
+      </span>
+    </footer>
+  </body>
+</html>
