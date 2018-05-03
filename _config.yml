@@ -26,6 +26,3 @@ plugins:
 permalink:      /:year-:month-:day/:title
 paginate:       5
 
-source: app
-
-baseurl: /suanchinyeo.github.io
