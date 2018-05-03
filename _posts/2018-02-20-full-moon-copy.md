@@ -1,0 +1,54 @@
+---
+layout: post
+title: "Of Full Moons, Valentine's, and Crimes"
+author: "Suan Chin Yeo"
+---
+
+_"I don't know what it is about the full moon ... Something about it, people just go off the walls. [...] Crazy stuff, when the moon is full, it's just like times ten... I don't know ... Maybe it's the tide or something."_ **- The X-Files season 7, episode 12**
+
+We have a long standing fascination with the moon, most notably the werewolf lore, where men bitten by werewolves turn into wolves when the moon is full. Which, of course, was what Moulder came into Willow Park to look for in this episode of X-files.<sup id="a1">[1](#f1)</sup> In a rewatch of this episode to "research" for this post, I can say there are at least 10 or more mentions of full moons and shots of full moons. 
+
+X-files aside, I have heard that emergency rooms in hospitals are busier and rowdier on nights with full moons. Which was the first I've heard a reference to this "full moon effect" in real life.
+
+Which makes you wonder, in an age where we're more connected to the trending hashtag than the farmer's almanac, does the full moon really make us lose our cool?<sup id="a2">[2](#f2)</sup> Or does it only work on fictional characters?
+
+So, I downloaded the [data of complaints the New York City Police Department has collected during the period of 2006 to 2016, including all misdemeanors, felonies, and violations](https://catalog.data.gov/dataset/nypd-complaint-data-historic) and found the dates of full moons, new moons, first quarter moons, what have you, in 2016 New York. 
+
+Let's take a look at the crimes in New York City in 2016:
+
+![2016fullmoon](https://suanchinyeo.github.io/assets/2016fullmoon.png)
+
+Do you see a trend of complaints with full moons? I don't either.
+
+But this doesn't tell us much, what if there's a delay to the "lunar effect"? Or what if, the moon does have an effect on crime, just not the full moon? We can roughly assign each day of the year into the more or less 30 day cycle of the moon by resetting to 1 every new moon and look at the number of complaints. The lack of correlation is stark:
+
+![2016mooncorr](https://suanchinyeo.github.io/assets/2016mooncorr.png)
+
+So, what does have an effect on criminal behaviours? By picking out the dates with the highest and lowest compliants, most of the dates become instantly recognizable, and the rest were quickly cleared up with a google search:
+
+![2016notabledates](https://suanchinyeo.github.io/assets/2016notabledates.png)
+
+Does this surprise you? It appears that even criminal behaviours have to be put on hold for family obligations and Valentine's day. Who knew! What really bothered me, is the mysterious June 1st, 2016. What happened on this day in New York? It wasn't a holiday, it wasn't even a weekend, it was a normal working day. I feel like a character in a time travelling story, doing my research for my trip into the past but only getting bits and pieces of information that must have been so obvious to everyone who was there at that time.
+
+I couldn't let it go. So I figured, let's look at 2015, is June 1st an annual thing, or was it only 2016?
+
+![2015notabledates](https://suanchinyeo.github.io/assets/2015notabledates.png)
+
+Turns out, Valentine's Day, along with Christmas, did not have such a notable effect on complaints in 2015. Was this a particularly lonely year, where instead of spending time with family, New Yorkers were out and about causing mischief? Who knows. Additionally, it appears that the number of complaints spike close to the start of every month for several months. Do we have a full moon effect this year?
+
+![2015fullmoon](https://suanchinyeo.github.io/assets/2015fullmoon.png)
+
+Nopes.
+
+I think we can tell from this little exercise that it is fairly difficult to predict crime rates from just dates of the year. It may be easy to look at the data in retrospect and say, aha! I can explain the dip and the spike here! But as we see, with only two year's worth of data, what we thought were good predictors in 2016 failed to perform well for 2015. Which of these dates can actually accurately predict a higher or lower than normal crime rate when we include more data? 
+
+But that's a story for another day.
+
+
+<center> __Footnotes__ </center>
+
+<b id="f1">1</b> In more recent adaptations of the lore, werewolves can now conveniently to switch from man/woman to wolf at will, just as vampires have become conveniently sparkly in the sun. But I digress. [↩](#a1)
+
+<b id="f2">2</b> Except, of course, when the lunar calendar tells us it's Chinese New Year! Happy year of the dog! May you succeed in politely declining to be overfed from well meaning family members. [↩](#a2)
+
+
