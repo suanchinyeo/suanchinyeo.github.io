@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Authorship Prediction in Sci-Fi Literature Part II: Bag of Words in Neural Network &middot; suanchinyeo
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <!-- Begin Jekyll SEO tag v2.4.0 -->
+<title>Authorship Prediction in Sci-Fi Literature Part II: Bag of Words in Neural Network | suanchinyeo</title>
+<meta name="generator" content="Jekyll v3.7.3" />
+<meta property="og:title" content="Authorship Prediction in Sci-Fi Literature Part II: Bag of Words in Neural Network" />
+<meta name="author" content="Suan Chin Yeo" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Part 1 ended with the dataset. Here, in Part 2, I’m going to cover a simple and intuitive machine learning strategy for classifying text known as the Bag of Words method. It fell short for this dataset, but keep in mind that many machine learning tasks are empirical in nature, and you never know what will work with a particular task/dataset until you try. So this experience does not invalidate the method itself." />
+<meta property="og:description" content="Part 1 ended with the dataset. Here, in Part 2, I’m going to cover a simple and intuitive machine learning strategy for classifying text known as the Bag of Words method. It fell short for this dataset, but keep in mind that many machine learning tasks are empirical in nature, and you never know what will work with a particular task/dataset until you try. So this experience does not invalidate the method itself." />
+<link rel="canonical" href="http://localhost:4000/2018-04-30/scifi2" />
+<meta property="og:url" content="http://localhost:4000/2018-04-30/scifi2" />
+<meta property="og:site_name" content="suanchinyeo" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-04-30T00:00:00-04:00" />
+<script type="application/ld+json">
+{"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2018-04-30/scifi2"},"author":{"@type":"Person","name":"Suan Chin Yeo"},"description":"Part 1 ended with the dataset. Here, in Part 2, I’m going to cover a simple and intuitive machine learning strategy for classifying text known as the Bag of Words method. It fell short for this dataset, but keep in mind that many machine learning tasks are empirical in nature, and you never know what will work with a particular task/dataset until you try. So this experience does not invalidate the method itself.","@type":"BlogPosting","headline":"Authorship Prediction in Sci-Fi Literature Part II: Bag of Words in Neural Network","dateModified":"2018-04-30T00:00:00-04:00","datePublished":"2018-04-30T00:00:00-04:00","url":"http://localhost:4000/2018-04-30/scifi2","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+
+  <body>
+    <nav class="nav">
+      <div class="nav-container">
+        <a href="/">
+          <h2 class="nav-title">suanchinyeo</h2>
+        </a>
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/">Posts</a></li>
+        </ul>
+    </div>
+  </nav>
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Suan Chin Yeo
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2018-04-30 00:00:00 -0400">April 30, 2018</time>
+    
+  </div>
+
+  <h1 class="post-title">Authorship Prediction in Sci-Fi Literature Part II: Bag of Words in Neural Network</h1>
+  <div class="post-line"></div>
+
+  <p>Part 1 ended with the dataset. Here, in Part 2, I’m going to cover a simple and intuitive machine learning strategy for classifying text known as the Bag of Words method. It fell short for this dataset, but keep in mind that many machine learning tasks are empirical in nature, and you never know what will work with a particular task/dataset until you try. So this experience does not invalidate the method itself.</p>
+
+<p>I run into two significant challenges in this part: the lack of memory problem and the feature engineering problem. The memory problem is resolved to the degree required for this project. The feature selection is resolved to some degree, but will be further improved in Part 3.</p>
+
+<p>Before we start messing with this, split dataset into training, validation, and test sets. Here’s a simple function that will take in a pandas dataframe and a <code class="highlighter-rouge">training_size</code> between 0 and 1 and returns a shuffled training set of specified size (1 being the entire dataset and 0 being none of the dataset) and split the remaining equally into validation and test sets. I used 0.7 for <code class="highlighter-rouge">training_size</code>, and so have a 70%, 15%, and 15% split. A seed is set so this can be reused if datasets get lost for whatever reason.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">train_valid_test</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">training_size</span><span class="p">):</span>
+    <span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">seed</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+    <span class="n">shuffled</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">random</span><span class="o">.</span><span class="n">permutation</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">),]</span>
+
+    <span class="n">trainSetSize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">shuffled</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="n">training_size</span><span class="p">)</span>
+    <span class="n">validSetSize</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">shuffled</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">*</span><span class="p">((</span><span class="mi">1</span><span class="o">-</span><span class="n">training_size</span><span class="p">)</span><span class="o">/</span><span class="mi">2</span><span class="p">))</span>
+
+    <span class="n">trainSet</span> <span class="o">=</span> <span class="n">shuffled</span><span class="o">.</span><span class="n">iloc</span><span class="p">[:</span><span class="n">trainSetSize</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">validSet</span> <span class="o">=</span> <span class="n">shuffled</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">trainSetSize</span><span class="o">+</span><span class="mi">1</span><span class="p">:</span><span class="n">trainSetSize</span><span class="o">+</span><span class="n">validSetSize</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">testSet</span> <span class="o">=</span> <span class="n">shuffled</span><span class="o">.</span><span class="n">iloc</span><span class="p">[</span><span class="n">trainSetSize</span><span class="o">+</span><span class="n">validSetSize</span><span class="o">+</span><span class="mi">1</span><span class="p">:,</span> <span class="p">:]</span>
+
+    <span class="k">return</span> <span class="n">trainSet</span><span class="p">,</span> <span class="n">validSet</span><span class="p">,</span> <span class="n">testSet</span>
+
+<span class="n">train</span><span class="p">,</span> <span class="n">valid</span><span class="p">,</span> <span class="n">test</span> <span class="o">=</span> <span class="n">train_valid_test</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="mf">0.7</span><span class="p">)</span></code></pre></figure>
+
+<p>Everything that is happening from here on out is happening on the training set unless otherwise specified.</p>
+
+<p>We have our sentences with authors assigned. Before we can even think of predicting the authors, we need to represent our data in a way that a machine learning algorithm “understands”. We need to convert sentences into numbers, preferably retaining some meaning so the algorithm is able to learn a pattern.</p>
+
+<p>A simple and intuitive method is the bag of words representation. Where each sentence is divided into words (known as tokenizing) and each unique word becomes a feature. For each sentence, its features would the number of times each word is used in that sentence. In other words we would have as many features as we have unique words in our dataset.</p>
+
+<p>Here’s a toy example to better illustrate the idea:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">toy_data</span>
+                                            <span class="n">sentence</span>
+<span class="mi">0</span>  <span class="n">Test</span><span class="err">!</span> <span class="n">Sentence</span> <span class="n">one</span> <span class="n">has</span> <span class="n">an</span> <span class="n">exclamation</span> <span class="n">mark</span><span class="p">,</span> <span class="ow">or</span><span class="o">...</span>
+<span class="mi">1</span>              <span class="n">Test2</span><span class="err">!</span> <span class="n">Sentence</span> <span class="n">two</span> <span class="n">has</span> <span class="n">a</span> <span class="n">number</span> <span class="n">too</span><span class="o">.</span>
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">bag_of_words</span>
+   <span class="err">!</span>  <span class="p">,</span>  <span class="o">.</span>  <span class="err">?</span>  <span class="n">a</span>  <span class="n">an</span>  <span class="n">exclamation</span>  <span class="n">has</span>  <span class="ow">is</span>  <span class="n">it</span>  <span class="n">mark</span>  <span class="n">number</span>  <span class="n">one</span>  <span class="ow">or</span>  <span class="n">point</span>  \
+<span class="mi">0</span>  <span class="mi">1</span>  <span class="mi">1</span>  <span class="mi">0</span>  <span class="mi">1</span>  <span class="mi">0</span>   <span class="mi">1</span>            <span class="mi">1</span>    <span class="mi">1</span>   <span class="mi">1</span>   <span class="mi">1</span>     <span class="mi">1</span>       <span class="mi">0</span>    <span class="mi">1</span>   <span class="mi">1</span>      <span class="mi">1</span>   
+<span class="mi">1</span>  <span class="mi">1</span>  <span class="mi">0</span>  <span class="mi">1</span>  <span class="mi">0</span>  <span class="mi">1</span>   <span class="mi">0</span>            <span class="mi">0</span>    <span class="mi">1</span>   <span class="mi">0</span>   <span class="mi">0</span>     <span class="mi">0</span>       <span class="mi">1</span>    <span class="mi">0</span>   <span class="mi">0</span>      <span class="mi">0</span>   
+
+   <span class="n">sentence</span>  <span class="n">test</span>  <span class="n">test2</span>  <span class="n">too</span>  <span class="n">two</span>  
+<span class="mi">0</span>         <span class="mi">1</span>     <span class="mi">1</span>      <span class="mi">0</span>    <span class="mi">0</span>    <span class="mi">0</span>  
+<span class="mi">1</span>         <span class="mi">1</span>     <span class="mi">0</span>      <span class="mi">1</span>    <span class="mi">1</span>    <span class="mi">1</span> </code></pre></figure>
+
+<p>This can be implemented quite painlessly with the following packages:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">from</span> <span class="nn">nltk.tokenize</span> <span class="kn">import</span> <span class="n">TreebankWordTokenizer</span> <span class="c"># for the tokenizer</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span> <span class="c"># for the dataframe creation</span>
+<span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">CountVectorizer</span> <span class="c"># for bag of words implementation</span></code></pre></figure>
+
+<p>While we’re at it, we can stem the words. Stemming is a way of converting english words into their root words, like <code class="highlighter-rouge">writing</code> into <code class="highlighter-rouge">write</code>. Except stemming doesn’t do that, it converts both <code class="highlighter-rouge">writing</code> and <code class="highlighter-rouge">write</code> into <code class="highlighter-rouge">writ</code> (which incidentally is another word entirely). To get grammatically correct conversions, you can do lemmatization instead, which is also provided by <code class="highlighter-rouge">nltk</code> package. The reason I chose stemming is because we are dealing with science fiction texts and very likely will encounter words that can be stemmed but will not appear in the standard english dictionary.</p>
+
+<p>To implement stemming, we can define a tokenizer using <code class="highlighter-rouge">nltk</code> and feed this tokenizer into <code class="highlighter-rouge">sklearn</code>’s <code class="highlighter-rouge">CountVectorizer</code>.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">nltk</span>
+<span class="kn">from</span> <span class="nn">nltk.tokenize</span> <span class="kn">import</span> <span class="n">TreebankWordTokenizer</span>
+<span class="kn">from</span> <span class="nn">nltk.stem</span> <span class="kn">import</span> <span class="n">SnowballStemmer</span>
+<span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">CountVectorizer</span>
+
+<span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+
+<span class="k">class</span> <span class="nc">Snowball</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snow</span> <span class="o">=</span> <span class="n">SnowballStemmer</span><span class="p">(</span><span class="s">"english"</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">snow</span><span class="o">.</span><span class="n">stem</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">TreebankWordTokenizer</span><span class="p">()</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">doc</span><span class="p">)]</span>
+    
+<span class="n">vectorizer</span> <span class="o">=</span> <span class="n">CountVectorizer</span><span class="p">(</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">Snowball</span><span class="p">())</span>
+<span class="n">vectorizer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"sentence"</span><span class="p">])</span>
+<span class="n">matrix</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"sentence"</span><span class="p">])</span>
+<span class="n">dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">A</span><span class="p">,</span>
+                         <span class="n">columns</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">get_feature_names</span><span class="p">())</span></code></pre></figure>
+
+<p>The dataframe would be the bag of words implemented on the sentences, with no flitering. This is a huge dataset, with my choice of segmentation, the bag of words implementation on the training set was close to 4GB with more than 20,000 features. My six-year-old MacBookPro has 4GB RAM and runs out of memory around 20 epochs with 2000 features (this can be easily remedied, <em>to an extent</em>, as I’ll talk about later). We (I/my laptop) cannot efficiently train on this dataset. We need to do some feature engineering.</p>
+
+<p>To select features, we need to know what’s going on. Since the dataset is close to the size of my RAM, I can’t open this dataset without crashing the Mac. There’s a very simple way of doing this in R, but in an effort to prevent from jumping too much between R and Python, I experimented with several Python friendly ways of doing this. After suffering several crashes, I went back to R. This is not to say that nothing worked in Python, but that the troubleshooting and learning process was too time consuming for me.</p>
+
+<p>So let me take this opportunity to introduce a wonderful wizadry of memory management that is the <code class="highlighter-rouge">data.table</code> package in R. I do not pretend to know what happens under the hood, but working with big data feels absolutely no different from working with smaller sized data. There’s no delay in speed, your computer doesn’t crash, there’s no difference in syntax. It’s really great for data exploration. Although keep in mind that this is in the <code class="highlighter-rouge">data.table</code> package, if you try to plot the entire <code class="highlighter-rouge">DataFrame</code> object obtained from <code class="highlighter-rouge">data.table</code> and it’s quite large, this may crash your computer. But you can absolutely plot parts of it.</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">library</span><span class="p">(</span><span class="n">data.table</span><span class="p">)</span><span class="w"> </span><span class="c1"># after installing, attach the package</span><span class="w">
+
+</span><span class="n">train</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">fread</span><span class="p">(</span><span class="s2">"scifi_train_bagOfWords.csv"</span><span class="p">,</span><span class="w"> 
+                </span><span class="n">stringsAsFactors</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span><span class="w"> </span><span class="c1"># almost always, set to FALSE</span><span class="w">
+                </span><span class="n">data.table</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">FALSE</span><span class="p">,</span><span class="w"> </span><span class="c1"># returns a data.table if T, Data.Frame if F</span><span class="w">
+                </span><span class="n">verbose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">,</span><span class="w"> </span><span class="c1"># for your sanity</span><span class="w">
+                </span><span class="n">header</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w"> </span></code></pre></figure>
+
+<p>This took about five minutes on my laptop (with multiple Chrome windows opened, each with at least 15 tabs). I’ve heard that it can read in seconds. You can’t complain with performance like that.</p>
+
+<p>Preprocessing steps I’ve done before this:</p>
+<ul>
+  <li>Using regex, sum all the features that contain numbers into the the feature <code class="highlighter-rouge">NUMBERS</code>.</li>
+  <li>Calculated the length of sentences (<code class="highlighter-rouge">rowsum</code>).</li>
+</ul>
+
+<p>Now we’ll look at the sums of each features. And yes, not doing it iteratively crashed my Mac. So play safe and do it iteratively.</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">train_columns</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">colnames</span><span class="p">(</span><span class="n">new_train</span><span class="p">)</span><span class="w">
+</span><span class="n">column_sums</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">numeric</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">))</span><span class="w">
+</span><span class="nf">names</span><span class="p">(</span><span class="n">column_sums</span><span class="p">)</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">train_columns</span><span class="w">
+
+
+</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">)){</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">train_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"author"</span><span class="p">,</span><span class="w"> </span><span class="s2">"rowsum"</span><span class="p">))){</span><span class="w">
+    </span><span class="n">column_sums</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">new_train</span><span class="p">[,</span><span class="w"> </span><span class="n">i</span><span class="p">])</span><span class="w">
+    </span><span class="n">cat</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="s2">"Summed"</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">,</span><span class="s2">":"</span><span class="p">,</span><span class="w"> </span><span class="n">train_columns</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="s2">"\n"</span><span class="p">),</span><span class="w"> </span><span class="n">sep</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">" "</span><span class="p">)</span><span class="w"> </span><span class="c1"># make it verbose</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="n">column_sums_dist</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">quantile</span><span class="p">(</span><span class="n">column_sums</span><span class="p">,</span><span class="w"> </span><span class="n">probs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">seq</span><span class="p">(</span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="m">1</span><span class="p">,</span><span class="w"> </span><span class="m">0.1</span><span class="p">))</span></code></pre></figure>
+
+<p>The distribution is very skewed!</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown"><span class="gt">&gt; column_sums_dist</span>
+   0%   10%   20%   30%   40%   50%   60%   70%   80%   90%  100% 
+    0     1     1     1     2     2     4     7    15    46 59833 </code></pre></figure>
+
+<p>30% of features have only been used once in the dataset. 70% of features have been used less than 10 times. In case you’re wondering, this dataset has 47768 rows (sentences).</p>
+
+<p>I’ve tried several feature selection strategies, detailed below. For each of these strategies, I trained them on a neural network constructed in <code class="highlighter-rouge">tensorflow</code>. There are many hyperparameters you can tweak to improve performance, but it quickly became clear that the biggest factor in performance was feature selection. So I won’t be detailing the hyperparameters, as none of these turned out to be good enough.</p>
+
+<p>After selecting features in R, the validation set can be similarly processed in Python. The reasons to switch back to Python here are the following:</p>
+<ul>
+  <li>Files are no longer larger than the RAM.</li>
+  <li>We can load the training data into Python, process the validation set, process both into standardized <code class="highlighter-rouge">numpy</code> arrays and into <code class="highlighter-rouge">tensorflow</code> dataset and subsequently feed into the neural network.</li>
+</ul>
+
+<p>This can be done with the following, slightly overly verbose pipeline:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+
+<span class="c"># -------- Fill in the right info here ------------------</span>
+<span class="n">dataset</span> <span class="o">=</span> <span class="s">"scifi_sd_top2000"</span>
+<span class="n">pickle_file</span> <span class="o">=</span> <span class="n">dataset</span> <span class="o">+</span> <span class="s">"_train_and_valid.pckl"</span>
+
+<span class="n">author_scifi</span> <span class="o">=</span> <span class="p">{</span><span class="s">"ERB"</span><span class="p">:</span><span class="mi">0</span><span class="p">,</span>
+                <span class="s">"HGW"</span><span class="p">:</span><span class="mi">1</span><span class="p">,</span>
+                <span class="s">"JV"</span><span class="p">:</span><span class="mi">2</span><span class="p">,</span>
+                <span class="s">"PKD"</span><span class="p">:</span><span class="mi">3</span><span class="p">}</span>
+
+<span class="n">non_x_scifi</span> <span class="o">=</span> <span class="p">[</span><span class="s">"author"</span><span class="p">]</span>
+
+<span class="c"># Check if pickle_file exists</span>
+<span class="kn">from</span> <span class="nn">os</span> <span class="kn">import</span> <span class="n">listdir</span>
+
+<span class="k">if</span> <span class="n">pickle_file</span> <span class="ow">in</span> <span class="n">listdir</span><span class="p">():</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"pickle_file already exists."</span><span class="p">)</span>
+    <span class="kn">import</span> <span class="nn">sys</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Exiting."</span><span class="p">)</span>
+    <span class="n">sys</span><span class="o">.</span><span class="nb">exit</span><span class="p">()</span>
+
+<span class="c"># Data loading and preparation</span>
+
+
+
+<span class="k">def</span> <span class="nf">loadingData</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">author</span><span class="p">,</span> <span class="n">non_x_columns</span><span class="p">):</span>
+    <span class="s">"""Takes in a training, validation, or test dataframe
+from the scifi_authors project. File must have
+Bag of Words implemented with authors' column named
+"author".
+        Returns:
+        1. features in numpy array.
+        2. labels with one hot encoding in numpy array."""</span>
+    <span class="n">original_data</span> <span class="o">=</span> <span class="n">dataframe</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">original_data</span><span class="p">[[</span><span class="s">"author"</span><span class="p">]]</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">original_data</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span> <span class="o">=</span> <span class="n">non_x_columns</span><span class="p">)</span>
+    <span class="n">authors_one_hot</span> <span class="o">=</span> <span class="p">{</span><span class="s">"author"</span><span class="p">:</span><span class="n">author</span><span class="p">}</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">authors_one_hot</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">author</span><span class="p">))[</span><span class="n">y</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()]</span>
+    <span class="k">return</span> <span class="n">X</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="n">y</span>
+
+<span class="k">def</span> <span class="nf">standardize</span><span class="p">(</span><span class="n">X</span><span class="p">,</span><span class="n">train</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">minimum</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span> <span class="n">maximum</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+    <span class="s">""" X is the features to be standardized (min max scaling).
+If not standardizing training data (e.g. validation or test),
+set train to False and enter a numpy array to val. All values
+in features will be divided by the numpy array."""</span>
+    <span class="k">if</span> <span class="n">train</span><span class="p">:</span>
+        <span class="n">minimum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="nb">min</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+        <span class="n">maximum</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="nb">max</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="n">max_min_range</span> <span class="o">=</span> <span class="n">maximum</span> <span class="o">-</span> <span class="n">minimum</span>
+    <span class="n">standardized_X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">divide</span><span class="p">(</span><span class="n">X</span><span class="o">-</span><span class="n">minimum</span><span class="p">,</span> <span class="n">max_min_range</span><span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="p">:],</span>
+                               <span class="n">where</span> <span class="o">=</span> <span class="n">max_min_range</span><span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="p">:]</span> <span class="o">!=</span> <span class="mi">0</span><span class="p">)</span>
+    <span class="k">if</span> <span class="n">train</span><span class="p">:</span>
+        <span class="k">return</span> <span class="n">standardized_X</span><span class="p">,</span> <span class="n">minimum</span><span class="p">,</span> <span class="n">maximum</span>
+    <span class="k">return</span> <span class="n">standardized_X</span>
+
+<span class="k">def</span> <span class="nf">loadTraining</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">author</span><span class="p">,</span> <span class="n">non_x_columns</span><span class="p">):</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">loadingData</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">author</span><span class="p">,</span> <span class="n">non_x_columns</span><span class="p">)</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">minimum</span><span class="p">,</span> <span class="n">maximum</span> <span class="o">=</span> <span class="n">standardize</span><span class="p">(</span><span class="n">X</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">minimum</span><span class="p">,</span> <span class="n">maximum</span>
+
+<span class="k">def</span> <span class="nf">loadValidOrTest</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">author</span><span class="p">,</span> <span class="n">non_x_columns</span><span class="p">,</span> <span class="n">minimum</span><span class="p">,</span> <span class="n">maximum</span><span class="p">):</span>
+    <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">loadingData</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">author</span><span class="p">,</span> <span class="n">non_x_columns</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">standardize</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">train</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">minimum</span> <span class="o">=</span> <span class="n">minimum</span><span class="p">,</span> <span class="n">maximum</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span>
+
+<span class="k">def</span> <span class="nf">bagOfWords</span><span class="p">(</span><span class="nb">file</span><span class="p">,</span> <span class="n">train</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+    <span class="s">""" Takes a csv file from scifi_authors project as input
+where the file has two columns: author, sentences. Author
+column has the author who wrote the sentences in the sentences
+columns.
+        Outputs a dataframe with bag of words implemented.
+        If columns == None, nothing else is done.
+        If columns != None, will return dataframe with the
+columns specified."""</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Bag of Words function called."</span><span class="p">)</span>
+    <span class="kn">import</span> <span class="nn">nltk</span>
+    <span class="kn">from</span> <span class="nn">nltk.tokenize</span> <span class="kn">import</span> <span class="n">TreebankWordTokenizer</span>
+    <span class="kn">from</span> <span class="nn">nltk.stem</span> <span class="kn">import</span> <span class="n">SnowballStemmer</span>
+    <span class="kn">from</span> <span class="nn">sklearn.feature_extraction.text</span> <span class="kn">import</span> <span class="n">CountVectorizer</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s">"Packages loaded."</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="nb">file</span><span class="p">)</span>
+
+    <span class="k">class</span> <span class="nc">Snowball</span><span class="p">():</span>
+        <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">snow</span> <span class="o">=</span> <span class="n">SnowballStemmer</span><span class="p">(</span><span class="s">"english"</span><span class="p">)</span>
+        <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="p">):</span>
+            <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">snow</span><span class="o">.</span><span class="n">stem</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">TreebankWordTokenizer</span><span class="p">()</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">doc</span><span class="p">)]</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Snowball tokenizer created."</span><span class="p">)</span>
+    
+    <span class="n">vectorizer</span> <span class="o">=</span> <span class="n">CountVectorizer</span><span class="p">(</span><span class="n">tokenizer</span> <span class="o">=</span> <span class="n">Snowball</span><span class="p">())</span>
+    <span class="n">vectorizer</span><span class="o">.</span><span class="n">fit</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"sentence"</span><span class="p">])</span>
+    <span class="n">matrix</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">fit_transform</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s">"sentence"</span><span class="p">])</span>
+    <span class="n">dataframe</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">matrix</span><span class="o">.</span><span class="n">A</span><span class="p">,</span>
+                             <span class="n">columns</span> <span class="o">=</span> <span class="n">vectorizer</span><span class="o">.</span><span class="n">get_feature_names</span><span class="p">())</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Bag of words implemented."</span><span class="p">)</span>
+    
+    <span class="n">dataframe</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">astype</span><span class="p">(</span><span class="s">"float32"</span><span class="p">)</span>
+    <span class="n">dataframe</span><span class="p">[</span><span class="s">"rowsum"</span><span class="p">]</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="nb">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Rowsum added."</span><span class="p">)</span>
+        
+    <span class="n">dataframe</span><span class="o">.</span><span class="n">index</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span>
+    <span class="n">dataframe</span><span class="p">[</span><span class="s">"author"</span><span class="p">]</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s">"author"</span><span class="p">]</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Author reattached."</span><span class="p">)</span>
+
+    <span class="c"># deal with numbers columns</span>
+    <span class="n">numbers_columns</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="nb">filter</span><span class="p">(</span><span class="n">regex</span> <span class="o">=</span> <span class="p">(</span><span class="s">"[0-9]"</span><span class="p">))</span>
+    <span class="n">dataframe</span><span class="p">[</span><span class="s">"numbers"</span><span class="p">]</span> <span class="o">=</span> <span class="n">numbers_columns</span><span class="o">.</span><span class="nb">sum</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"Numbers column added."</span><span class="p">)</span>
+    
+    <span class="k">if</span> <span class="ow">not</span> <span class="n">train</span><span class="p">:</span>
+        <span class="n">dataframe</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">reindex</span><span class="p">(</span><span class="n">columns</span> <span class="o">=</span> <span class="n">columns</span><span class="p">)</span>
+        <span class="n">dataframe</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">fillna</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"Selected columns for dataframe."</span><span class="p">)</span>
+    
+    <span class="k">return</span> <span class="n">dataframe</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"All functions loaded."</span><span class="p">)</span>
+<span class="c"># ----- Loading Data ---------------</span>
+
+<span class="n">trainData</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">dataset</span> <span class="o">+</span> <span class="s">".csv"</span><span class="p">)</span>
+<span class="n">trainX</span><span class="p">,</span> <span class="n">trainY</span><span class="p">,</span> <span class="n">minimum</span><span class="p">,</span> <span class="n">maximum</span> <span class="o">=</span> <span class="n">loadTraining</span><span class="p">(</span><span class="n">trainData</span><span class="p">,</span>
+                                                <span class="n">author</span> <span class="o">=</span> <span class="n">author_scifi</span><span class="p">,</span>
+                                                <span class="n">non_x_columns</span> <span class="o">=</span> <span class="n">non_x_scifi</span><span class="p">)</span>
+<span class="n">train_columns</span> <span class="o">=</span> <span class="n">trainData</span><span class="o">.</span><span class="n">columns</span>
+<span class="n">validData</span> <span class="o">=</span> <span class="n">bagOfWords</span><span class="p">(</span><span class="s">"valid.csv"</span><span class="p">,</span> <span class="n">train</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">columns</span> <span class="o">=</span> <span class="n">train_columns</span><span class="p">)</span>
+<span class="n">validX</span><span class="p">,</span> <span class="n">validY</span> <span class="o">=</span> <span class="n">loadValidOrTest</span><span class="p">(</span><span class="n">validData</span><span class="p">,</span>
+                                 <span class="n">author</span> <span class="o">=</span> <span class="n">author_scifi</span><span class="p">,</span>
+                                 <span class="n">non_x_columns</span> <span class="o">=</span> <span class="n">non_x_scifi</span><span class="p">,</span>
+                                 <span class="n">minimum</span> <span class="o">=</span> <span class="n">minimum</span><span class="p">,</span>
+                                 <span class="n">maximum</span> <span class="o">=</span> <span class="n">maximum</span><span class="p">)</span>
+<span class="k">print</span><span class="p">(</span><span class="s">"Data loaded."</span><span class="p">)</span>
+<span class="c"># ----- Saving Data ----------------</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="n">pickle_file</span><span class="p">,</span> <span class="s">"wb"</span><span class="p">)</span>
+<span class="n">pickle</span><span class="o">.</span><span class="n">dump</span><span class="p">([</span><span class="n">trainX</span><span class="p">,</span> <span class="n">trainY</span><span class="p">,</span> <span class="n">validX</span><span class="p">,</span> <span class="n">validY</span><span class="p">],</span> <span class="n">f</span><span class="p">)</span>
+<span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+
+
+<span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Data saved in {pickle_file}."</span><span class="p">)</span></code></pre></figure>
+
+<p>Having a data processing pipeline means I can do the data exploration and feature selection in R, which involves active decision making, come here, change one line and have everything ready to go for the neural network.</p>
+
+<p>The neural network script is very automated as well. But I will be going through it in chunks so it makes sense. I use <code class="highlighter-rouge">tensorflow</code> for neural network because once you learn it, it’s very easy and nice to use.</p>
+
+<p>Load the processed data:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">tensorflow</span> <span class="k">as</span> <span class="n">tf</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">pickle</span>
+
+<span class="n">f</span> <span class="o">=</span> <span class="nb">open</span><span class="p">(</span><span class="s">"scifi_sd_top2000_train_and_valid.pckl"</span><span class="p">,</span> <span class="s">"rb"</span><span class="p">)</span>
+<span class="n">trainX</span><span class="p">,</span> <span class="n">trainY</span><span class="p">,</span> <span class="n">validX</span><span class="p">,</span> <span class="n">validY</span> <span class="o">=</span> <span class="n">pickle</span><span class="o">.</span><span class="n">load</span><span class="p">(</span><span class="n">f</span><span class="p">)</span>
+<span class="n">f</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+<span class="n">trainSet</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">data</span><span class="o">.</span><span class="n">Dataset</span><span class="o">.</span><span class="n">from_tensor_slices</span><span class="p">((</span><span class="n">trainX</span><span class="p">,</span> <span class="n">trainY</span><span class="p">))</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"Data loaded."</span><span class="p">)</span></code></pre></figure>
+
+<p>I use the <code class="highlighter-rouge">tensorflow</code> Dataset because it allows easy shuffling.</p>
+
+<p>Next, some baseline performance values. The <code class="highlighter-rouge">random_guess_fn</code> makes random guesses for each entry and returns the accuracy. The <code class="highlighter-rouge">zero_rule_fn</code> guesses that every entry is the most frequently occuring entry, it may score better than <code class="highlighter-rouge">random_guess_fn</code>. For this project, the <code class="highlighter-rouge">random_guess_fn</code> is about 25% and <code class="highlighter-rouge">zero_rule_fn</code> is about 30%. So anything higher than this means the neural network is learning something.</p>
+
+<p>Now we want to construct the neural network. Depending on your perspective, <code class="highlighter-rouge">tensorflow</code> either makes this overly difficult or overly easy.</p>
+
+<p>First, the architecture:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># Neural network architecture</span>
+<span class="n">input_units</span> <span class="o">=</span> <span class="n">trainX</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+<span class="n">hidden_units</span> <span class="o">=</span> <span class="mi">50</span>
+<span class="n">output_units</span> <span class="o">=</span> <span class="n">trainY</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span></code></pre></figure>
+
+<p>Tweaking the architecture may or may not have significant effects on the outcome. Worth checking!</p>
+
+<p>Next, the neural network itself:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">neuralNetwork</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">hidden_units</span><span class="p">,</span> <span class="n">output_units</span><span class="p">,</span> <span class="n">lmb</span><span class="p">):</span>
+    <span class="n">regularizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">scale</span> <span class="o">=</span> <span class="n">lmb</span><span class="p">)</span>
+    <span class="n">layer1</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">x</span><span class="p">,</span>
+                                               <span class="n">hidden_units</span><span class="p">,</span>
+                                               <span class="n">activation_fn</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">relu</span><span class="p">,</span>
+                                               <span class="n">weights_regularizer</span> <span class="o">=</span> <span class="n">regularizer</span><span class="p">,</span>
+                                               <span class="n">weights_initializer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">xavier_initializer</span><span class="p">(</span><span class="n">seed</span> <span class="o">=</span> <span class="mi">10101</span><span class="p">))</span>
+    <span class="n">output</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">fully_connected</span><span class="p">(</span><span class="n">layer1</span><span class="p">,</span>
+                                               <span class="n">output_units</span><span class="p">,</span>
+                                               <span class="n">activation_fn</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">,</span>
+                                               <span class="n">weights_regularizer</span> <span class="o">=</span> <span class="n">regularizer</span><span class="p">,</span>
+                                               <span class="n">weights_initializer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">xavier_initializer</span><span class="p">(</span><span class="n">seed</span> <span class="o">=</span> <span class="mi">10102</span><span class="p">))</span>
+    <span class="k">return</span> <span class="n">output</span></code></pre></figure>
+
+<p>Yes, <code class="highlighter-rouge">tensorflow</code> makes this really easy. Let’s talk about the activation function first. There are many common activation functions for neural networks, including sigmoid, tanh, relu. They all have their pros and cons. Sigmoid and tanh can be susceptible to the disappearing gradient problem, where the values fed into the first layer through backpropagation is so small that it no longer learns. However, relu can have the dead relu problem, where it outputs 0 and then can no longer be revived, and so, stops learning. There is also the exploding gradient problem, which I haven’t encountered yet.</p>
+
+<p>For this project and dataset, I encountered the dead relu problem. So I changed the output layer to a sigmoid layer, and this seems to solve it. The dead relu problem can be solved by sigmoid or tanh because disappearing gradient is still <em>some gradient</em> whereas dead relu is nothing. However, I used one of the two to prevent either problem from being too much and to ensure the network is learning.</p>
+
+<p>Next, the other parts of the neural network:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">epochs</span> <span class="o">=</span> <span class="mi">20</span>
+<span class="n">report</span> <span class="o">=</span> <span class="mi">5</span>
+<span class="n">batch_size</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">trainX</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="mf">56.0</span><span class="p">)</span>
+<span class="n">alpha</span> <span class="o">=</span> <span class="mf">0.05</span>
+<span class="n">lmb</span> <span class="o">=</span> <span class="mf">0.00005</span>
+
+<span class="n">x_data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span> <span class="o">=</span><span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="n">input_units</span><span class="p">])</span>
+<span class="n">y_data</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">placeholder</span><span class="p">(</span><span class="n">dtype</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">float32</span><span class="p">,</span> <span class="n">shape</span> <span class="o">=</span><span class="p">[</span><span class="bp">None</span><span class="p">,</span> <span class="n">output_units</span><span class="p">])</span>
+
+<span class="n">output</span> <span class="o">=</span> <span class="n">neuralNetwork</span><span class="p">(</span><span class="n">x_data</span><span class="p">,</span> <span class="n">hidden_units</span><span class="p">,</span> <span class="n">output_units</span><span class="p">,</span> <span class="n">lmb</span><span class="p">)</span>
+
+<span class="n">reg_losses</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">get_collection</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">GraphKeys</span><span class="o">.</span><span class="n">REGULARIZATION_LOSSES</span><span class="p">)</span>
+<span class="n">cost</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">squared_difference</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">y_data</span><span class="p">))</span> <span class="o">+</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">reg_losses</span><span class="p">)</span>
+
+<span class="n">optimizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">AdamOptimizer</span><span class="p">(</span><span class="n">learning_rate</span> <span class="o">=</span> <span class="n">alpha</span><span class="p">)</span>
+<span class="n">gvs</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">compute_gradients</span><span class="p">(</span><span class="n">cost</span><span class="p">)</span>
+<span class="n">train_op</span> <span class="o">=</span> <span class="n">optimizer</span><span class="o">.</span><span class="n">apply_gradients</span><span class="p">(</span><span class="n">gvs</span><span class="p">)</span>
+
+<span class="n">pred_correct</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">equal</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="mi">1</span><span class="p">),</span> <span class="n">tf</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">y_data</span><span class="p">,</span> <span class="mi">1</span><span class="p">))</span>
+<span class="n">pred_accuracy</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">cast</span><span class="p">(</span><span class="n">pred_correct</span><span class="p">,</span> <span class="s">"float"</span><span class="p">))</span></code></pre></figure>
+
+<p>I’m doing mini batch gradient descent, the size of the mini batches is set by the <code class="highlighter-rouge">batch_size</code> parameter. You can do stochastic or batch. But I wouldn’t subject my laptop to batch gradient descent. Already this takes one minute per epoch. In Part 3, we’ll have a better method that not only outperforms bag of words, but trains at 12 to 16s per epoch.</p>
+
+<p>In tensorflow, it is deceptively easy to set a regularizer in our neural network, but this regularizer is <em>not applied</em> if you do not manually add regularization loss to the cost function! This is what <code class="highlighter-rouge">reg_losses</code> is doing. As for the cost function, this is the MSE, a better cost function for multiclass may be the log loss or softmax. Which I tried. I prefer the logloss:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">-</span><span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">y_data</span><span class="o">*</span><span class="n">tf</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="n">output</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">)</span> <span class="o">+</span> <span class="p">(</span><span class="mi">1</span><span class="o">-</span><span class="n">y_data</span><span class="p">)</span><span class="o">*</span><span class="n">tf</span><span class="o">.</span><span class="n">log</span><span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">output</span> <span class="o">+</span> <span class="mf">1e-9</span><span class="p">))</span></code></pre></figure>
+
+<p>For some reason the <code class="highlighter-rouge">tensorflow</code> logloss doesn’t work, and it needs to be coded explicitly.</p>
+
+<p>The optimizer can be simplified by calling <code class="highlighter-rouge">optimizer.minimize(cost)</code>. But remember the disappearing gradients and dead relu problem? The way to check if you have those problems is to print the gradients. By having an intermediate step, we can print the computed gradients by printing gvs. And then apply it by running <code class="highlighter-rouge">train_op</code>.</p>
+
+<p>And finally, we can calculate our accuracy.</p>
+
+<p>This is the actual training:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">train_fn</span><span class="p">(</span><span class="n">filename</span><span class="p">,</span> <span class="n">epochs</span> <span class="o">=</span> <span class="n">epochs</span><span class="p">,</span> <span class="n">print_gradient</span> <span class="o">=</span> <span class="bp">False</span><span class="p">,</span> <span class="n">restore</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+    <span class="n">saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Training start"</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">restore</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">saver</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">restore</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"Restored."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">())</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"Neural network architechture:"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{input_units} input units, {hidden_units} hidden units, {output_units} output units."</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">""</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"learning rate: {alpha}"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"regularization: {lmb}"</span><span class="p">)</span>
+        <span class="n">epochs</span> <span class="o">=</span> <span class="n">epochs</span>
+        <span class="n">total_batches</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">trainX</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epochs</span><span class="p">):</span>
+            <span class="n">avg_cost</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="c"># shuffling and making training data into mini batches in hopes of avoiding</span>
+            <span class="c"># converging on bad local minima.</span>
+            <span class="n">shuffledTrain</span> <span class="o">=</span> <span class="n">trainSet</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">buffer_size</span> <span class="o">=</span> <span class="n">trainX</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">minibatch</span> <span class="o">=</span> <span class="n">shuffledTrain</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
+            <span class="n">mbIter</span> <span class="o">=</span> <span class="n">minibatch</span><span class="o">.</span><span class="n">make_initializable_iterator</span><span class="p">()</span>
+            <span class="n">current_batch</span> <span class="o">=</span> <span class="n">mbIter</span><span class="o">.</span><span class="n">get_next</span><span class="p">()</span>
+            <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">mbIter</span><span class="o">.</span><span class="n">initializer</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">total_batches</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">current_batch</span><span class="p">)</span>
+                    <span class="n">c</span><span class="p">,</span> <span class="n">grad</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">cost</span><span class="p">,</span> <span class="n">gvs</span><span class="p">,</span> <span class="n">train_op</span><span class="p">],</span> <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">x_data</span> <span class="p">:</span> <span class="n">X</span><span class="p">,</span> <span class="n">y_data</span> <span class="p">:</span> <span class="n">y</span><span class="p">})</span>
+                    <span class="n">avg_cost</span> <span class="o">+=</span> <span class="n">c</span><span class="o">/</span><span class="n">total_batches</span>
+                <span class="k">except</span> <span class="n">tf</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">OutOfRangeError</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"minibatch {i} of {total_batches}"</span><span class="p">)</span>
+                    <span class="k">break</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">%</span><span class="n">report</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">print_gradient</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="n">grad</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{e} of {epochs} epochs. Cost = {avg_cost}"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{e} of {epochs} epochs. Cost = {avg_cost}"</span><span class="p">)</span>
+        <span class="c"># prediction</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"Training ends"</span><span class="p">)</span>
+        <span class="n">train_accur</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">pred_accuracy</span><span class="p">,</span> <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">x_data</span> <span class="p">:</span> <span class="n">trainX</span><span class="p">,</span> <span class="n">y_data</span> <span class="p">:</span> <span class="n">trainY</span><span class="p">})</span>
+        <span class="n">valid_accur</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">pred_accuracy</span><span class="p">,</span> <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">x_data</span> <span class="p">:</span> <span class="n">validX</span><span class="p">,</span> <span class="n">y_data</span> <span class="p">:</span> <span class="n">validY</span><span class="p">})</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Training accuracy: {train_accur}"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Validation accuracy: {valid_accur}"</span><span class="p">)</span>
+        <span class="n">saver</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"Ready to train."</span><span class="p">)</span></code></pre></figure>
+
+<p>The simple restore feature is how I get around the running out of memory problem. If you run out of memory on <code class="highlighter-rouge">tensorflow</code>, it doesn’t tell you anything. It just restarts your shell. On terminal, you get an equally unhelpful but more mysterious response: the error message <code class="highlighter-rouge">Killed 9</code> before the shell restarts. The <code class="highlighter-rouge">restore</code> feature allows training in small chunks of epoch (say 20), and saves a checkpoint file and quits. The function can be called again with this checkpoint file as an argument for <code class="highlighter-rouge">restore</code>. The checkpoint file is then loaded and training can resume from epoch 21.</p>
+
+<p>This pipeline makes it very easy for me to get a new dataset and run it through the same neural network. I find it important to set this up because it running new tests becomes almost effortless.</p>
+
+<p>Now that the mechanics are out of the way, let’s talk about feature selection.</p>
+
+<h2 id="column-sums">Column Sums</h2>
+
+<p>First off, the easiest way is to calculate the number of times each word is used and employ a cutoff. This made sense to me because in the beginning, I wanted to minimize the number of words in the training set that won’t occur in the validation or test set. The higher the cut off, the less features we have. What cutoff to use? I didn’t know, so I tried several:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="c1"># cut off at 100 </span><span class="w">
+</span><span class="n">train100</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="p">[,</span><span class="w"> </span><span class="n">train_columns</span><span class="p">[</span><span class="n">column_sums</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">100</span><span class="p">]]</span><span class="w">
+</span><span class="n">train100</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="o">$</span><span class="n">author</span><span class="w">
+
+</span><span class="c1"># cut off at 250</span><span class="w">
+</span><span class="n">train250</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="p">[,</span><span class="w"> </span><span class="n">train_columns</span><span class="p">[</span><span class="n">column_sums</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">250</span><span class="p">]]</span><span class="w">
+</span><span class="n">train250</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="o">$</span><span class="n">author</span><span class="w">
+
+</span><span class="c1"># cutoff at 500</span><span class="w">
+</span><span class="n">train500</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="p">[,</span><span class="w"> </span><span class="n">train_columns</span><span class="p">[</span><span class="n">column_sums</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">500</span><span class="p">]]</span><span class="w">
+</span><span class="n">train500</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="o">$</span><span class="n">author</span><span class="w">
+
+</span><span class="c1"># cutoff at 1000</span><span class="w">
+</span><span class="n">train1000</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="p">[,</span><span class="w"> </span><span class="n">train_columns</span><span class="p">[</span><span class="n">column_sums</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">1000</span><span class="p">]]</span><span class="w">
+</span><span class="n">train1000</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="o">$</span><span class="n">author</span><span class="w">
+
+</span><span class="n">fwrite</span><span class="p">(</span><span class="n">train100</span><span class="p">,</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"train100.csv"</span><span class="p">,</span><span class="w"> </span><span class="n">verbose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+</span><span class="n">fwrite</span><span class="p">(</span><span class="n">train250</span><span class="p">,</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"train250.csv"</span><span class="p">,</span><span class="w"> </span><span class="n">verbose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+</span><span class="n">fwrite</span><span class="p">(</span><span class="n">train500</span><span class="p">,</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"train500.csv"</span><span class="p">,</span><span class="w"> </span><span class="n">verbose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span><span class="w">
+</span><span class="n">fwrite</span><span class="p">(</span><span class="n">train1000</span><span class="p">,</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"train1000.csv"</span><span class="p">,</span><span class="w"> </span><span class="n">verbose</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">TRUE</span><span class="p">)</span></code></pre></figure>
+
+<p>None of these are particularly good :</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">train1000:
+    training accuracy: 60.90%
+    validation accuracy: 52.42%
+train500:
+    training accuracy: 70.14%
+    validation accuracy: 54.45%%
+train250:
+    training accuracy: 82.83%
+    validation accuracy: 59.29%
+train100:
+    training accuracy: 89.23%
+    validation accuracy: 64.93%</code></pre></figure>
+
+<p>Fairly bad. But you see that the performance gets better as we get more features. This suggests that key features were being missed by having a higher cutoff. And maybe there are other metrics of evaluating features that would better reflect if they are important or not.</p>
+
+<p>By the way I hit a memory problem at <code class="highlighter-rouge">train100</code>. So we can’t keep increasing features. While I do have the workaround in my <code class="highlighter-rouge">train_fn()</code>, the workaround won’t work if we can’t even run one epoch. It’s also highly inefficient.</p>
+
+<h2 id="tf-idf">TF-IDF</h2>
+
+<p>The next method is the TF-IDF method. The TF-IDF calculates how important a word is to identifying a document from other documents.</p>
+
+<p>Term frequency (TF), can be calculated this way:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">(number of times term occurs in document)/(number of terms in document)</code></pre></figure>
+
+<p>Inverse document frequency (IDF), can be calculated this way:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">log( (total number of documents)/(number of documents with term) )</code></pre></figure>
+
+<p>TF-IDF is then:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">TF<span class="err">*</span>IDF</code></pre></figure>
+
+<p>Doing this in R:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">jv_tf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">numeric</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">))</span><span class="w">
+</span><span class="n">hgw_tf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">numeric</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">))</span><span class="w">
+</span><span class="n">erb_tf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">numeric</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">))</span><span class="w">
+</span><span class="n">pkd_tf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">numeric</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">))</span><span class="w">
+
+
+
+</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">)){</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">train_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"author"</span><span class="p">,</span><span class="w"> </span><span class="s2">"rowsum"</span><span class="p">))){</span><span class="w">
+    </span><span class="n">jv_tf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">train</span><span class="p">[</span><span class="n">train</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"JV"</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="nf">sum</span><span class="p">(</span><span class="n">train</span><span class="o">$</span><span class="n">rowsum</span><span class="p">[</span><span class="n">train</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"JV"</span><span class="p">])</span><span class="w">
+    </span><span class="n">hgw_tf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">train</span><span class="p">[</span><span class="n">train</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"HGW"</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="nf">sum</span><span class="p">(</span><span class="n">train</span><span class="o">$</span><span class="n">rowsum</span><span class="p">[</span><span class="n">train</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"HGW"</span><span class="p">])</span><span class="w">
+    </span><span class="n">erb_tf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">train</span><span class="p">[</span><span class="n">train</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"ERB"</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="nf">sum</span><span class="p">(</span><span class="n">train</span><span class="o">$</span><span class="n">rowsum</span><span class="p">[</span><span class="n">train</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"ERB"</span><span class="p">])</span><span class="w">
+    </span><span class="n">pkd_tf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">sum</span><span class="p">(</span><span class="n">train</span><span class="p">[</span><span class="n">train</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"PKD"</span><span class="p">,</span><span class="w"> </span><span class="n">i</span><span class="p">])</span><span class="o">/</span><span class="nf">sum</span><span class="p">(</span><span class="n">train</span><span class="o">$</span><span class="n">rowsum</span><span class="p">[</span><span class="n">train</span><span class="o">$</span><span class="n">author</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="s2">"PKD"</span><span class="p">])</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">0</span><span class="p">){</span><span class="w">
+    </span><span class="n">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="n">save</span><span class="p">(</span><span class="n">jv_tf</span><span class="p">,</span><span class="w"> </span><span class="n">hgw_tf</span><span class="p">,</span><span class="w"> </span><span class="n">erb_tf</span><span class="p">,</span><span class="w"> </span><span class="n">pkd_tf</span><span class="p">,</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"term_frequencies.RData"</span><span class="p">)</span><span class="w">
+
+</span><span class="n">idf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">numeric</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">))</span><span class="w">
+
+</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">)){</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">train_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"author"</span><span class="p">,</span><span class="w"> </span><span class="s2">"rowsum"</span><span class="p">))){</span><span class="w">
+    </span><span class="n">idf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">log</span><span class="p">(</span><span class="m">4</span><span class="o">/</span><span class="nf">sum</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="n">jv_tf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="n">hgw_tf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="n">erb_tf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">,</span><span class="w"> </span><span class="n">pkd_tf</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="m">0</span><span class="p">)</span><span class="w"> </span><span class="p">))</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">0</span><span class="p">){</span><span class="w">
+    </span><span class="n">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span><span class="w">
+
+</span><span class="n">jv_tfidf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">jv_tf</span><span class="o">*</span><span class="n">idf</span><span class="w">
+</span><span class="n">erb_tfidf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">erb_tf</span><span class="o">*</span><span class="n">idf</span><span class="w">
+</span><span class="n">hgw_tfidf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">hgw_tf</span><span class="o">*</span><span class="n">idf</span><span class="w">
+</span><span class="n">pkd_tfidf</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">pkd_tf</span><span class="o">*</span><span class="n">idf</span><span class="w">
+
+</span><span class="n">save</span><span class="p">(</span><span class="n">jv_tfidf</span><span class="p">,</span><span class="w"> </span><span class="n">erb_tfidf</span><span class="p">,</span><span class="w"> </span><span class="n">hgw_tfidf</span><span class="p">,</span><span class="w"> </span><span class="n">pkd_tfidf</span><span class="p">,</span><span class="w"> </span><span class="n">file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">"tfidf.RData"</span><span class="p">)</span></code></pre></figure>
+
+<p>For TF-IDF, I selected the top scoring terms of each author. With different cutoffs. Here’s an example using top50 terms of each author:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">jv_tfidf_order</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rev</span><span class="p">(</span><span class="n">order</span><span class="p">(</span><span class="n">jv_tfidf</span><span class="p">))</span><span class="w">
+</span><span class="n">hgw_tfidf_order</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rev</span><span class="p">(</span><span class="n">order</span><span class="p">(</span><span class="n">hgw_tfidf</span><span class="p">))</span><span class="w">
+</span><span class="n">erb_tfidf_order</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rev</span><span class="p">(</span><span class="n">order</span><span class="p">(</span><span class="n">erb_tfidf</span><span class="p">))</span><span class="w">
+</span><span class="n">pkd_tfidf_order</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rev</span><span class="p">(</span><span class="n">order</span><span class="p">(</span><span class="n">pkd_tfidf</span><span class="p">))</span><span class="w">
+</span><span class="c1"># highest tfidf score of each author of each author:</span><span class="w">
+
+</span><span class="n">top50_columns</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">unique</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="n">train_columns</span><span class="p">[</span><span class="n">jv_tfidf_order</span><span class="p">[</span><span class="m">1</span><span class="o">:</span><span class="m">50</span><span class="p">]],</span><span class="w">
+                          </span><span class="n">train_columns</span><span class="p">[</span><span class="n">hgw_tfidf_order</span><span class="p">[</span><span class="m">1</span><span class="o">:</span><span class="m">50</span><span class="p">]],</span><span class="w">
+                          </span><span class="n">train_columns</span><span class="p">[</span><span class="n">erb_tfidf_order</span><span class="p">[</span><span class="m">1</span><span class="o">:</span><span class="m">50</span><span class="p">]],</span><span class="w"> 
+                          </span><span class="n">train_columns</span><span class="p">[</span><span class="n">pkd_tfidf_order</span><span class="p">[</span><span class="m">1</span><span class="o">:</span><span class="m">50</span><span class="p">]],</span><span class="w"> 
+                          </span><span class="s2">"author"</span><span class="p">,</span><span class="w"> 
+                          </span><span class="s2">"rowsum"</span><span class="p">))</span><span class="w">
+</span><span class="n">top50</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">new_train</span><span class="p">[,</span><span class="n">top50_columns</span><span class="p">]</span><span class="w">
+
+</span><span class="n">write.csv</span><span class="p">(</span><span class="n">top50</span><span class="p">,</span><span class="w"> </span><span class="s2">"scifi_top50.csv"</span><span class="p">)</span></code></pre></figure>
+
+<p>I tested using largest number of features I selected:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">top 250 TF-IDF terms of each author:
+    training accuracy: 65.23%
+    validation accuracy: 62.24%
+top 200 TF-IDF terms of each author:
+    training accuracy: 63.82%
+    validation accuracy: 61.24%</code></pre></figure>
+
+<p>There is certainly a lot less overfitting with this set of features, the performance is quite low. Then it occurs to me, that IDF becomes 0 if a term occurs in all documents. Meaning terms like “a”, “the”, “.”, and so on would not be selected as all authors have used them. It doesn’t matter if it’s used once or many times, IDF will be 0.</p>
+
+<p>This may be a good metric for search engines to identify documents by search terms, but it’s not suitable for our purposes.</p>
+
+<h2 id="standard-deviation-of-term-frequencies">Standard deviation of term frequencies</h2>
+
+<p>Since we’ve gone through the trouble of calculating term frequencies, I thought I can calculate the standard deviation of term frequencies between authors, and select the terms with highest standard deviation. In other words, terms that are used most differently by each author.</p>
+
+<p>This is easily calculated:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">standard_deviation</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">numeric</span><span class="p">(</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">))</span><span class="w">
+
+</span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="m">1</span><span class="o">:</span><span class="nf">length</span><span class="p">(</span><span class="n">train_columns</span><span class="p">)){</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="p">(</span><span class="n">train_columns</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">%in%</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="s2">"author"</span><span class="p">,</span><span class="w"> </span><span class="s2">"rowsum"</span><span class="p">))){</span><span class="w">
+    </span><span class="n">a</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="nf">c</span><span class="p">(</span><span class="n">jv_tf</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">pkd_tf</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">hgw_tf</span><span class="p">[</span><span class="n">i</span><span class="p">],</span><span class="w"> </span><span class="n">erb_tf</span><span class="p">[</span><span class="n">i</span><span class="p">])</span><span class="w">
+    </span><span class="n">standard_deviation</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">sd</span><span class="p">(</span><span class="n">a</span><span class="p">)</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+  </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="w"> </span><span class="o">%%</span><span class="w"> </span><span class="m">500</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="m">0</span><span class="p">){</span><span class="w">
+    </span><span class="n">print</span><span class="p">(</span><span class="n">i</span><span class="p">)</span><span class="w">
+  </span><span class="p">}</span><span class="w">
+</span><span class="p">}</span></code></pre></figure>
+
+<p>Now again, create some cut offs, this is one example:</p>
+
+<figure class="highlight"><pre><code class="language-r" data-lang="r"><span class="n">sd_order</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">rev</span><span class="p">(</span><span class="n">order</span><span class="p">(</span><span class="n">standard_deviation</span><span class="p">))</span><span class="w">
+
+</span><span class="n">sd_top2000_columns</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">unique</span><span class="p">(</span><span class="nf">c</span><span class="p">(</span><span class="n">train_columns</span><span class="p">[</span><span class="n">sd_order</span><span class="p">[</span><span class="m">1</span><span class="o">:</span><span class="m">2000</span><span class="p">]],</span><span class="w"> 
+                               </span><span class="s2">"author"</span><span class="p">,</span><span class="w"> 
+                               </span><span class="s2">"rowsum"</span><span class="p">))</span><span class="w">
+</span><span class="n">sd_top2000</span><span class="w"> </span><span class="o">&lt;-</span><span class="w"> </span><span class="n">train</span><span class="p">[,</span><span class="w"> </span><span class="n">sd_top2000_columns</span><span class="p">]</span><span class="w">
+</span><span class="n">write.csv</span><span class="p">(</span><span class="n">sd_top2000</span><span class="p">,</span><span class="w"> </span><span class="s2">"scifi_sd_top2000.csv"</span><span class="p">)</span></code></pre></figure>
+
+<p>Again, testing the set with the highest features:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">top 1800 features with highest standard deviation:
+    training accuracy: 92.09%
+    validation accuracy: 71.80%
+top 2000 features with highest standard deviation:
+    training accuracy: 94.64%
+    validation accuracy: 74.78%%</code></pre></figure>
+
+<p>This is the best performing of the bunch. But it is not good enough. It’s hard to tell what is good enough because this is my own dataset and no one has worked on it before. But here’s how I know it can do better. By increasing the number of features, I keep seeing an increase in performance. I haven’t encountered the plateau. This means it’s not performing at its best.</p>
+
+<p>But here’s the problem. I can’t afford to keep increasing features since the increase I get isn’t much. And I’m already forced to train at 20 epochs each time.</p>
+
+<h2 id="a-combination">A combination</h2>
+
+<p>The TF-IDF method is really quite logical. You can’t fault the math, the words picked with that method must be very good at identifying authors indeed. However, these are also words that may not show up in every sentence, and we would permanently miss these sentences. The dataset with top 200 TF-IDF scoring terms of each author has 764 features, the one with top 250 terms has 948 features. So I’m getting a 2% increase in performance with almost a 200 increase in number of features. To get a respectable accuracy … say 80%, assuming a linear relationship, we need almost 2000 more features. More or less.</p>
+
+<p>But since the features selected in standard deviation method works so well, I thought I would combine the two. However, this set of features resulted in extreme overfitting: 99.4% training accuracy and 31.4% validation accuracy. If you’ve been keeping track, that validation accuracy is no better than the zero sum baseline performance. We would do almost just as well if we calculated the most frequently occuring author and apply it to the prediction.</p>
+
+<p>But before we end, here are some other ideas I thought about but did not explore:</p>
+<ul>
+  <li>tf*log(sd)</li>
+  <li>bag of n-grams</li>
+</ul>
+
+<p>There is a better way to go about this. Which I will cover in the next post. Again, depending on the task and dataset, one way may not necessarily be superior than the other. These things need to be empirically tested.</p>
+
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/2018-05-03/scifi3" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/2018-03-30/scifi1" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+      <span>
+        &copy; <time datetime="2018-05-04 02:29:55 -0400">2018</time> Suan Chin Yeo. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme. Icons made by <a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>
+      </span>
+    </footer>
+  </body>
+</html>

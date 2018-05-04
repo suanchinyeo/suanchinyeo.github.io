@@ -1,0 +1,1111 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      Authorship Prediction in Sci-Fi Literature Part III: N-grams and Word embedding &middot; suanchinyeo
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <!-- Begin Jekyll SEO tag v2.4.0 -->
+<title>Authorship Prediction in Sci-Fi Literature Part III: N-grams and Word embedding | suanchinyeo</title>
+<meta name="generator" content="Jekyll v3.7.3" />
+<meta property="og:title" content="Authorship Prediction in Sci-Fi Literature Part III: N-grams and Word embedding" />
+<meta name="author" content="Suan Chin Yeo" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="Part 2 was a lot of exploration in feature engineering and evaluating our choices with the Bag of Words model trained on a simple neural network." />
+<meta property="og:description" content="Part 2 was a lot of exploration in feature engineering and evaluating our choices with the Bag of Words model trained on a simple neural network." />
+<link rel="canonical" href="http://localhost:4000/2018-05-03/scifi3" />
+<meta property="og:url" content="http://localhost:4000/2018-05-03/scifi3" />
+<meta property="og:site_name" content="suanchinyeo" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-05-03T00:00:00-04:00" />
+<script type="application/ld+json">
+{"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2018-05-03/scifi3"},"author":{"@type":"Person","name":"Suan Chin Yeo"},"description":"Part 2 was a lot of exploration in feature engineering and evaluating our choices with the Bag of Words model trained on a simple neural network.","@type":"BlogPosting","headline":"Authorship Prediction in Sci-Fi Literature Part III: N-grams and Word embedding","dateModified":"2018-05-03T00:00:00-04:00","datePublished":"2018-05-03T00:00:00-04:00","url":"http://localhost:4000/2018-05-03/scifi3","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+
+  <body>
+    <nav class="nav">
+      <div class="nav-container">
+        <a href="/">
+          <h2 class="nav-title">suanchinyeo</h2>
+        </a>
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/">Posts</a></li>
+        </ul>
+    </div>
+  </nav>
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Suan Chin Yeo
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2018-05-03 00:00:00 -0400">May 03, 2018</time>
+    
+  </div>
+
+  <h1 class="post-title">Authorship Prediction in Sci-Fi Literature Part III: N-grams and Word embedding</h1>
+  <div class="post-line"></div>
+
+  <p>Part 2 was a lot of exploration in feature engineering and evaluating our choices with the Bag of Words model trained on a simple neural network.</p>
+
+<p>Here in part 3, we’re going to switch gears almost completely and employ word embedding.</p>
+
+<h1 id="word-embeddings">Word Embeddings</h1>
+<p>Word embedding a way to represent words to machine learning models, like Bag of Words. The advantage word embedding has over Bag of Words is that a dataset with 21 thousand unique words, and so 21 thousand unique features can be reduced to having a lot less number of features. Usually the length of the longest sentence is the minimum number of features. Without needing to throw words away like we were doing in the last post.</p>
+
+<p>In essence, we first represent each unique vocabulary word as a unique integer. And every sentence is converted into arrays of integers that represent a word in the vocabluary, and padded to the length of the longest array. So one sentence is converted to a <code class="highlighter-rouge">1xN</code> array, where <code class="highlighter-rouge">N</code> is the length of the longest sentence and each element in the array is an integer representing a unique word. Now, we add an embedding layer to our neural network. This layer converts this <code class="highlighter-rouge">1xN</code> array into a <code class="highlighter-rouge">NxE</code> matrix, where <code class="highlighter-rouge">E</code> is the embedding dimension that can be arbitrarily set. Each unique word is represented by a <code class="highlighter-rouge">1xE</code> vector in this matrix. The <code class="highlighter-rouge">1xE</code> vector is a result of the embedding layer, whose weights can be trainable or pretrained. So each sentence ends up being a two dimensional data type at the end of the embedding layer. We can then process this matrix (summing, averaging, minimum, maximum, concatenation, etc.) into a one dimensional array, and feed it into the next layer.</p>
+
+<p>This is the breakthrough that got my model to hit 80% accuracy. Since we avoid the going through the intermediate 4GB bag of words dataset, we also avoid the big data problem. This is even easier to implement than the Bag of Words method despite the initial complexity of the concept. And since there is a huge reduction in features (from 21k to about 300), we can add new features such as n-grams.</p>
+
+<h1 id="n-grams">N-grams</h1>
+<p>N-grams is an Natural Language Processing (NLP) concept. A gram is a word, a single word is known as unigram while two words are known as bigrams. You can go up to 2-gram (bigram), trigram, and so on. For example:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">"This is a sample sentence."
+
+Unigrams: "This", "is", "a", "sample", "sentence", "."
+Bigrams: "This--is", "is--a", "a--sample", "sample--sentence", "sentence--."</code></pre></figure>
+
+<p>Bigram is a short sequence that may reveal writing style, just like some authors may prefer certain words (the main idea behind Bag of Words), they may also prefer some sequences over others. A simple bigram that can be quite distinctive is “I–said”, or “said–I”. By including bigrams, we capture these features that we would otherwise miss.</p>
+
+<h1 id="more-text-processing-details">More text processing details</h1>
+<p>Even with word embedding, there are choices to make about feature processing. But we have a greater level of freedom as we are less limited by memory. These are the choices I made and experimented with:</p>
+
+<h2 id="any-word-that-contains-a-digit-from-0-to-9-is-treated-as-the-word-numbers">Any word that contains a digit from 0 to 9 is treated as the word “NUMBERS”</h2>
+<p>The reason I change every string containing a digit to “NUMBERS” is because of the authors in this dataset, I think Jules Verne really likes his numbers written as digits. And how often an author chooses to use digits rather than words to convey numbers may be an identifying feature. I don’t handpick features by looking at the dataset, in fact, I haven’t even looked at it. The only evaluations I’ve done are the distributions of frequency we looked at in the Part 2. This is just something I happen to know about Jules Verne because I’ve read him before.</p>
+
+<h2 id="stemming">Stemming</h2>
+<p>Depending on the size of the dataset, stemming may or may not have a negative effect on model performance. It may oversimplify features or reduce unnecessary features. I don’t think it would have been feasible to try no stemming in the Bag of Words model, but it’s certainly feasible here. Interestingly, not stemming and not converting every word to lowercase boosted performance very slightly (&lt;1%, hey, it’s significant if you’re playing on Kaggle, and a 10% boost is the result of many many tiny boosts). Here are the tokenizers I used:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="n">np</span>
+<span class="kn">import</span> <span class="nn">nltk</span> <span class="c"># just in case, I'm never quite sure what nltk requires</span>
+<span class="kn">from</span> <span class="nn">nltk.tokenize</span> <span class="kn">import</span> <span class="n">TreebankWordTokenizer</span>
+<span class="kn">from</span> <span class="nn">nltk.stem</span> <span class="kn">import</span> <span class="n">SnowballStemmer</span>
+
+<span class="c"># Tokenizer for stemming. Stemming converts grams to lowercases</span>
+<span class="k">class</span> <span class="nc">Snowball</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">snow</span> <span class="o">=</span> <span class="n">SnowballStemmer</span><span class="p">(</span><span class="s">"english"</span><span class="p">)</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="p">):</span>
+        <span class="k">return</span> <span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">snow</span><span class="o">.</span><span class="n">stem</span><span class="p">(</span><span class="n">t</span><span class="p">)</span> <span class="k">for</span> <span class="n">t</span> <span class="ow">in</span> <span class="n">TreebankWordTokenizer</span><span class="p">()</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">doc</span><span class="p">)]</span>
+
+<span class="c"># Tokenizer + lowercase processing</span>
+<span class="k">class</span> <span class="nc">Treebank</span><span class="p">():</span>
+    <span class="k">def</span> <span class="nf">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">tree</span> <span class="o">=</span> <span class="n">TreebankWordTokenizer</span><span class="p">()</span>
+    <span class="k">def</span> <span class="nf">__call__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">doc</span><span class="p">):</span>
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">tree</span><span class="o">.</span><span class="n">tokenize</span><span class="p">(</span><span class="n">doc</span><span class="o">.</span><span class="n">lower</span><span class="p">())</span>
+
+<span class="c"># To tokenize without lowercase, use TreebankWordTokenizer().tokenize</span></code></pre></figure>
+
+<h2 id="every-gram-in-training-set-gets-a-unique-integer-new-grams-in-validationtest-sets-are-treated-as-the-word-unk-for-unknown-unigram-and-unkbi-for-unknown-bigram">Every gram in training set gets a unique integer, new grams in validation/test sets are treated as the word “UNK” for unknown unigram and “UNKBI” for unknown bigram</h2>
+<p>The <code class="highlighter-rouge">"UNK"</code> and <code class="highlighter-rouge">"UNKBI"</code> is a necessary thing to introduce in the validation set. We will always run into words we did not encounter in the training set. However, at the same time, because we did not train with those words, does it cloud our model? Is it better to remove the words completely and have shorter sentences? I think both conditions send the wrong signal to the model. So I decided to treat <code class="highlighter-rouge">"UNK"</code> and <code class="highlighter-rouge">"UNKBI"</code> as rare unigrams and bigrams rather than unknown unigrams and bigrams. This at least retains some meaning for the model and we will be able to train on these words from our training set. I set a different treshold for unigrams and bigrams because bigrams are less likely to repeat themselves. I ended up replacing unigrams used &lt;= 2 times in the dataset as <code class="highlighter-rouge">"UNK"</code> and bigrams used &lt;= once as <code class="highlighter-rouge">"UNKBI"</code>. This significantly reduced vocabulary size (from about 200k to 50k) and gave me a 1% boost in accuracy.</p>
+
+<h1 id="implementation">Implementation</h1>
+<p>With these modifications, prediction accuracy is about 82% for the validation data. Hyperparameters tuning really doesn’t play a big role in this dataset/neural network model, regularization reduced accuracy of both training and validation set. Here are the functions to implement these processings and sentence arrays to feed into the embedding layer of the neural network:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># import numpy, pandas, and nltk required for tokenizers</span>
+
+<span class="k">def</span> <span class="nf">is_a_number</span><span class="p">(</span><span class="n">word</span><span class="p">):</span>
+    <span class="s">""" Returns true if word contains a digit."""</span>
+    <span class="k">return</span> <span class="nb">any</span><span class="p">(</span><span class="n">char</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">word</span><span class="p">)</span>
+
+<span class="k">def</span> <span class="nf">convert_to_np_with_padding</span><span class="p">(</span><span class="n">array</span><span class="p">,</span> <span class="n">maxlen</span><span class="p">):</span>
+    <span class="s">""" takes an array and the intended length of array (maxlen)
+returns padded array to the length specified.
+
+length of array must be shorter than maxlen."""</span>
+    <span class="n">np_array</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span>
+        <span class="p">[</span><span class="n">np</span><span class="o">.</span><span class="n">pad</span><span class="p">(</span>
+            <span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">u</span><span class="p">),</span>
+            <span class="p">(</span><span class="mi">0</span><span class="p">,</span> <span class="nb">max</span><span class="p">(</span>
+                <span class="p">[</span><span class="n">maxlen</span><span class="o">-</span><span class="n">np</span><span class="o">.</span><span class="n">array</span><span class="p">(</span><span class="n">u</span><span class="p">)</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">],</span> <span class="mi">0</span><span class="p">])),</span>
+            <span class="s">"constant"</span><span class="p">,</span>
+            <span class="n">constant_values</span> <span class="o">=</span> <span class="p">(</span><span class="mi">0</span><span class="p">))</span> <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="n">array</span><span class="p">])</span>
+    <span class="k">return</span> <span class="n">np_array</span>
+    
+
+<span class="k">def</span> <span class="nf">sentences_to_unigram_bigram_arrays_remlowfreq</span><span class="p">(</span>
+    <span class="n">sentences</span><span class="p">,</span>
+    <span class="n">tokenizer</span><span class="p">):</span>
+    <span class="s">""" Turns sentences into unigram and bigram arrays
+        to use as input for word embedding. Grams that occur
+        &lt;= 2 times are replaced with "UNK" if it's a unigram,
+        "UNKBI" if it's a bigram.
+
+        To be used on training set.
+        
+        takes the following:
+            sentences : {list} of sentences
+            tokenizer : a tokenizer
+        returns:
+            grams_to_int : {dictionary} with grams as
+                            keys and integers as values
+            vocab_size : {integer} vocabulary size
+            unigram array : {numpy array} a sentence encoded with
+                            unique index for each word, padded
+                            to the length of the longest sentence in sentences.
+            bigram array : {numpy array} a sentence encoded with
+                            unique index for each bigram, padded to
+                            the length of the longest sentence's bigram array."""</span>
+
+    <span class="n">ucounter</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">bcounter</span> <span class="o">=</span> <span class="p">{}</span>
+    <span class="n">unigrams</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">bigrams</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">uni_maxlen</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">bi_maxlen</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">report</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sentences</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">report</span> <span class="o">%</span> <span class="mi">1000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Processing sentence number {report}."</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">uni_array</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">bi_array</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)):</span>
+            <span class="k">if</span> <span class="n">is_a_number</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]):</span>
+                <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">=</span> <span class="s">"ISANUMBER"</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">ucounter</span><span class="p">[</span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">+=</span> <span class="mi">1</span>
+            <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+                <span class="n">ucounter</span><span class="p">[</span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="mi">1</span>
+            <span class="n">uni_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">])</span>
+            <span class="k">if</span> <span class="n">i</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span><span class="p">:</span>
+                <span class="k">if</span> <span class="n">is_a_number</span><span class="p">(</span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]):</span>
+                    <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span> <span class="o">=</span> <span class="s">"ISANUMBER"</span>
+                <span class="n">bigram</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">+</span><span class="s">"~~"</span><span class="o">+</span><span class="n">s</span><span class="p">[</span><span class="n">i</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">bcounter</span><span class="p">[</span><span class="n">bigram</span><span class="p">]</span> <span class="o">+=</span> <span class="mi">1</span>
+                <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+                    <span class="n">bcounter</span><span class="p">[</span><span class="n">bigram</span><span class="p">]</span> <span class="o">=</span> <span class="mi">1</span>
+                <span class="n">bi_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bigram</span><span class="p">)</span>
+        <span class="n">unigrams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">uni_array</span><span class="p">)</span>
+        <span class="n">bigrams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bi_array</span><span class="p">)</span>
+        <span class="n">uni_maxlen</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">uni_array</span><span class="p">),</span> <span class="n">uni_maxlen</span><span class="p">])</span>
+        <span class="n">bi_maxlen</span> <span class="o">=</span> <span class="nb">max</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">bi_array</span><span class="p">),</span> <span class="n">bi_maxlen</span><span class="p">])</span>
+        <span class="n">report</span> <span class="o">+=</span> <span class="mi">1</span>
+
+    <span class="n">grams_to_int_l</span> <span class="o">=</span> <span class="p">[</span><span class="n">ugrams</span> <span class="k">for</span> <span class="n">ugrams</span> <span class="ow">in</span> <span class="n">ucounter</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="n">bgrams</span> <span class="k">for</span> <span class="n">bgrams</span> <span class="ow">in</span> <span class="n">bcounter</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s">"UNK"</span><span class="p">]</span> <span class="o">+</span> <span class="p">[</span><span class="s">"UNKBI"</span><span class="p">]</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s">"starting to remove low frequency words."</span><span class="p">)</span>
+    
+    <span class="k">for</span> <span class="n">ucount</span> <span class="ow">in</span> <span class="n">ucounter</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">ucounter</span><span class="p">[</span><span class="n">ucount</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">grams_to_int_l</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">grams_to_int_l</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">ucount</span><span class="p">))</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s">"removed low frequency unigrams."</span><span class="p">)</span>
+
+    <span class="k">for</span> <span class="n">bcount</span> <span class="ow">in</span> <span class="n">bcounter</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">bcounter</span><span class="p">[</span><span class="n">bcount</span><span class="p">]</span> <span class="o">&lt;=</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="n">grams_to_int_l</span><span class="o">.</span><span class="n">pop</span><span class="p">(</span><span class="n">grams_to_int_l</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">bcount</span><span class="p">))</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="s">"removed low frequency bigrams."</span><span class="p">)</span>
+    
+    <span class="n">grams_to_int</span> <span class="o">=</span> <span class="p">{</span><span class="n">grams_to_int_l</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="p">:</span> <span class="n">i</span><span class="o">+</span><span class="mi">1</span> <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">grams_to_int_l</span><span class="p">))}</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"created dictionary."</span><span class="p">)</span>
+
+    <span class="c"># replacing grams with integers</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">unigrams</span><span class="p">)):</span>
+        <span class="k">for</span> <span class="n">u</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">unigrams</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">unigrams</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">u</span><span class="p">]</span> <span class="o">=</span> <span class="n">grams_to_int</span><span class="p">[</span><span class="n">unigrams</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">u</span><span class="p">]]</span>
+            <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+                <span class="n">unigrams</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">u</span><span class="p">]</span> <span class="o">=</span> <span class="n">grams_to_int</span><span class="p">[</span><span class="s">"UNK"</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">bigrams</span><span class="p">[</span><span class="n">i</span><span class="p">])):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">bigrams</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">grams_to_int</span><span class="p">[</span><span class="n">bigrams</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">b</span><span class="p">]]</span>
+            <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+                <span class="n">bigrams</span><span class="p">[</span><span class="n">i</span><span class="p">][</span><span class="n">b</span><span class="p">]</span> <span class="o">=</span> <span class="n">grams_to_int</span><span class="p">[</span><span class="s">"UNKBI"</span><span class="p">]</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"replaced grams with indices."</span><span class="p">)</span>
+
+    <span class="c"># padding</span>
+    <span class="n">unigram_np_array</span> <span class="o">=</span> <span class="n">convert_to_np_with_padding</span><span class="p">(</span><span class="n">unigrams</span><span class="p">,</span> <span class="n">uni_maxlen</span><span class="p">)</span>
+    <span class="n">bigram_np_array</span> <span class="o">=</span> <span class="n">convert_to_np_with_padding</span><span class="p">(</span><span class="n">bigrams</span><span class="p">,</span> <span class="n">bi_maxlen</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">grams_to_int</span><span class="p">,</span> <span class="nb">len</span><span class="p">(</span><span class="n">grams_to_int</span><span class="p">)</span><span class="o">+</span><span class="mi">1</span><span class="p">,</span> <span class="n">unigram_np_array</span><span class="p">,</span> <span class="n">bigram_np_array</span>
+
+<span class="k">def</span> <span class="nf">sentences_to_unigram_bigram_arrays</span><span class="p">(</span>
+    <span class="n">sentences</span><span class="p">,</span>
+    <span class="n">tokenizer</span><span class="p">,</span>
+    <span class="n">grams_to_int</span><span class="p">,</span>
+    <span class="n">unigram_maxlen</span><span class="p">,</span>
+    <span class="n">bigram_maxlen</span><span class="p">):</span>
+    <span class="s">""" Turns sentences into unigram and bigram arrays.
+
+        To be used on validation/test sets.
+        
+        takes the following:
+            sentences : {list} of sentences
+            tokenizer : a tokenizer
+            grams_to_int : {dictionary} to use if train is False
+            unigram_maxlen : {integer} the maximum length of
+                             unigram if train is False
+            bigram_maxlen : {integer} the maximum length of
+                            bigram if train is False
+        returns:
+            unigram array : {numpy array} a sentence encoded with
+                            unique index for each word, padded
+                            to the length of the longest sentence in sentences.
+            bigram array : {numpy array} a sentence encoded with
+                            unique index for each bigram, padded to
+                            the length of the longest sentence's bigram array."""</span>
+
+    <span class="n">unigrams</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">bigrams</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">report</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">s</span> <span class="ow">in</span> <span class="n">sentences</span><span class="p">:</span>
+        <span class="k">if</span> <span class="n">report</span> <span class="o">%</span> <span class="mi">1000</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Processing sentence number {report}."</span><span class="p">)</span>
+        <span class="n">s</span> <span class="o">=</span> <span class="n">tokenizer</span><span class="p">(</span><span class="n">s</span><span class="p">)</span>
+        <span class="n">uni_array</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">bi_array</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">w</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)):</span>
+            <span class="n">word</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">w</span><span class="p">]</span>
+            <span class="c"># turn any string containing digits into "ISANUMBER"</span>
+            <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">char</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">word</span><span class="p">):</span>
+                <span class="n">word</span> <span class="o">=</span> <span class="s">"ISANUMBER"</span>
+            <span class="k">if</span> <span class="n">word</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">grams_to_int</span><span class="p">:</span>
+                <span class="n">word</span> <span class="o">=</span> <span class="s">"UNK"</span>
+            <span class="k">if</span> <span class="n">w</span> <span class="o">&lt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">s</span><span class="p">)</span><span class="o">-</span><span class="mi">1</span> <span class="p">:</span>
+                <span class="n">nword</span> <span class="o">=</span> <span class="n">s</span><span class="p">[</span><span class="n">w</span><span class="o">+</span><span class="mi">1</span><span class="p">]</span>
+                <span class="k">if</span> <span class="nb">any</span><span class="p">(</span><span class="n">char</span><span class="o">.</span><span class="n">isdigit</span><span class="p">()</span> <span class="k">for</span> <span class="n">char</span> <span class="ow">in</span> <span class="n">nword</span><span class="p">):</span>
+                    <span class="n">nword</span> <span class="o">=</span> <span class="s">"ISANUMBER"</span>
+                <span class="n">bigram</span> <span class="o">=</span> <span class="n">word</span><span class="o">+</span><span class="s">"~~"</span><span class="o">+</span><span class="n">nword</span>
+                <span class="k">if</span> <span class="n">bigram</span> <span class="ow">not</span> <span class="ow">in</span> <span class="n">grams_to_int</span><span class="p">:</span>
+                    <span class="n">bigram</span> <span class="o">=</span> <span class="s">"UNKBI"</span>
+                <span class="n">bi_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">grams_to_int</span><span class="p">[</span><span class="n">bigram</span><span class="p">])</span>
+            <span class="n">uni_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">grams_to_int</span><span class="p">[</span><span class="n">word</span><span class="p">])</span>
+        <span class="c"># cut uni and bigram arrays of validation set</span>
+        <span class="c"># into the same length as those in training set</span>
+        <span class="n">uni_array</span> <span class="o">=</span> <span class="n">uni_array</span><span class="p">[:</span><span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">uni_array</span><span class="p">),</span> <span class="n">unigram_maxlen</span><span class="p">])]</span>
+        <span class="n">bi_array</span> <span class="o">=</span> <span class="n">bi_array</span><span class="p">[:</span><span class="nb">min</span><span class="p">([</span><span class="nb">len</span><span class="p">(</span><span class="n">bi_array</span><span class="p">),</span> <span class="n">bigram_maxlen</span><span class="p">])]</span>
+        <span class="n">unigrams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">uni_array</span><span class="p">)</span>
+        <span class="n">bigrams</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">bi_array</span><span class="p">)</span>
+        <span class="n">report</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="c"># create the arrays, with padding.</span>
+    <span class="n">unigram_np_array</span> <span class="o">=</span> <span class="n">convert_to_np_with_padding</span><span class="p">(</span><span class="n">unigrams</span><span class="p">,</span> <span class="n">unigram_maxlen</span><span class="p">)</span>
+    <span class="n">bigram_np_array</span> <span class="o">=</span> <span class="n">convert_to_np_with_padding</span><span class="p">(</span><span class="n">bigrams</span><span class="p">,</span> <span class="n">bigram_maxlen</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">unigram_np_array</span><span class="p">,</span> <span class="n">bigram_np_array</span>
+
+<span class="k">def</span> <span class="nf">word_embedding_data</span><span class="p">(</span>
+    <span class="n">dataframe</span><span class="p">,</span>
+    <span class="n">tokenizer</span><span class="p">,</span>
+    <span class="n">author</span><span class="p">,</span>
+    <span class="n">train</span> <span class="o">=</span> <span class="bp">True</span><span class="p">,</span>
+    <span class="n">grams_to_int</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+    <span class="n">unigram_maxlen</span> <span class="o">=</span> <span class="bp">None</span><span class="p">,</span>
+    <span class="n">bigram_maxlen</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+    <span class="s">""" Takes dataframe of scifi_authors project with authors
+        and sentences and returns X and y data where X is a
+        concatenation of unigram and bigram array and y is a
+        a one hot encoded array. 
+
+        Takes:
+            dataframe: {pd.dataframe} with columns "author" and "sentence"
+            tokenizer: tokenizer.
+            train: {boolean} whether or not this is a training set.
+            Only used if train is False:
+                grams_to_int: {dictionary} keys are strings of grams and unigrams,
+                              values are indices of integers.
+                unigram_maxlen: {integer} maximum length of unigram.
+                bigram_maxlen: {integer} maximum length of bigram.
+        Returns (in order):
+            X: {numpy array} concatenated unigram and bigram array
+                from sentences_to_unigram_bigram_arrays() function.
+            y: {numpy array} one hot array of authors column.
+            if train, the following are returned additionally:
+                grams_to_int: {dictionary} where keys are unigrams and bigrams
+                              and values are indices.
+                vocab_size: {integer} size of vocabulary.
+                unigram max length: {integer} maximum length of unigram array
+                bigram max length: {integer} maximum length of bigram
+        """</span>
+    <span class="c"># Applying one hot encoding to "author" column and creating y</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[[</span><span class="s">"author"</span><span class="p">]]</span>
+        <span class="n">authors_one_hot</span> <span class="o">=</span> <span class="p">{</span><span class="s">"author"</span><span class="p">:</span> <span class="n">author</span><span class="p">}</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">y</span><span class="o">.</span><span class="n">replace</span><span class="p">(</span><span class="n">authors_one_hot</span><span class="p">)</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">eye</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">authors_one_hot</span><span class="p">[</span><span class="s">"author"</span><span class="p">]))[</span><span class="n">y</span><span class="o">.</span><span class="n">values</span><span class="o">.</span><span class="n">flatten</span><span class="p">()]</span>
+    <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+        <span class="n">y</span> <span class="o">=</span> <span class="mi">0</span>
+
+    <span class="c"># Applying unigram and bigram encoding to "sentence" column and creating X</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="s">"sentence"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">dataframe</span><span class="p">[</span><span class="s">"text"</span><span class="p">]</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="k">if</span> <span class="n">train</span><span class="p">:</span>
+        <span class="n">grams_to_int</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">t_uni</span><span class="p">,</span> <span class="n">t_bi</span> <span class="o">=</span> <span class="n">sentences_to_unigram_bigram_arrays_remlowfreq</span><span class="p">(</span>
+            <span class="n">X</span><span class="p">,</span>
+            <span class="n">tokenizer</span><span class="p">)</span>
+        <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+            <span class="p">(</span><span class="n">t_uni</span><span class="p">,</span> <span class="n">t_bi</span><span class="p">),</span>
+            <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">X</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">grams_to_int</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">t_uni</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">],</span> <span class="n">t_bi</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">v_uni</span><span class="p">,</span> <span class="n">v_bi</span> <span class="o">=</span> <span class="n">sentences_to_unigram_bigram_arrays</span><span class="p">(</span>
+        <span class="n">X</span><span class="p">,</span>
+        <span class="n">tokenizer</span><span class="p">,</span>
+        <span class="n">grams_to_int</span> <span class="o">=</span> <span class="n">grams_to_int</span><span class="p">,</span>
+        <span class="n">unigram_maxlen</span> <span class="o">=</span> <span class="n">unigram_maxlen</span><span class="p">,</span>
+        <span class="n">bigram_maxlen</span> <span class="o">=</span> <span class="n">bigram_maxlen</span><span class="p">)</span>
+    <span class="n">X</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">concatenate</span><span class="p">(</span>
+        <span class="p">(</span><span class="n">v_uni</span><span class="p">,</span> <span class="n">v_bi</span><span class="p">),</span>
+        <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">X</span> <span class="p">,</span> <span class="n">y</span>
+
+<span class="k">print</span><span class="p">(</span><span class="s">"All functions loaded"</span><span class="p">)</span></code></pre></figure>
+
+<h1 id="neural-network-construction">Neural network construction</h1>
+<p>Now we are ready to feed it into the neural network. The code for this is basically the same as the one I used in part 2 except for the neural network architecture, we just add an embedding layer and a pooling layer. The decision making process here lies in the pooling layer. As previously explained, each sentence becomes an <code class="highlighter-rouge">NxE</code> array after embedding. We need to somehow turn this into a one dimensional array, this is what the pooling layer does.</p>
+
+<p>I experimented with several pooling options:</p>
+<h2 id="min-max-concat"><a href="https://stats.stackexchange.com/questions/221715/apply-word-embeddings-to-entire-document-to-get-a-feature-vector">Min-max-concat</a></h2>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">minimum</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_min</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">maximum</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_max</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span>
+<span class="n">pooling_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">concat</span><span class="p">([</span><span class="n">minimum</span><span class="p">,</span> <span class="n">maximum</span><span class="p">],</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span></code></pre></figure>
+
+<p>Min-max-concat did not get me very far, in fact its best performance was around 75% accuracy. This is possibly because there are so many low frequency words in this dataset and by using both the minimum and maximum vector, we amplify low frequency words and cloud the model.</p>
+
+<h2 id="mean-column-wise">Mean (column-wise)</h2>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">pooling_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_mean</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span></code></pre></figure>
+
+<p>Mean is a surprisingly simple solution that performs very well. It is on par with unweighted “sqrtn”.</p>
+
+<h2 id="unweighted-sqrtn-row-wise-column-wise">Unweighted “sqrtn” (<a href="https://www.tensorflow.org/api_docs/python/tf/nn/embedding_lookup_sparse">row-wise</a>, column-wise)</h2>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># row-wise</span>
+<span class="n">pooling_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">0</span><span class="p">)</span><span class="o">/</span><span class="n">tf</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">(</span><span class="n">number_of_features</span><span class="o">*</span><span class="n">embed_dim</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span>
+
+<span class="c"># column-wise</span>
+<span class="n">pooling_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span><span class="o">/</span><span class="n">tf</span><span class="o">.</span><span class="n">sqrt</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">(</span><span class="n">number_of_features</span><span class="o">*</span><span class="n">embed_dim</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">))</span></code></pre></figure>
+
+<p>This method is mentioned in <code class="highlighter-rouge">tensorflow</code>’s documentation and I tried it out by coding it myself because <code class="highlighter-rouge">tensorflow</code>’s implementation would require more overhaul of data organization than the one line I can just code. Column-wise implementation performs similarly with the mean method. Row-wise implementation overfits training data, resulting in lower validation accuracy. This has the option of adding trainable weights. I tried that option and it took 3 times as long to train and resulted in lower accuracy in both training and validation sets.</p>
+
+<h2 id="sum">Sum</h2>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="n">pooling_layer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">reduce_sum</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">convert_to_tensor</span><span class="p">(</span><span class="n">embedding</span><span class="p">,</span> <span class="n">np</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">axis</span> <span class="o">=</span> <span class="mi">1</span><span class="p">)</span></code></pre></figure>
+
+<p>Sum wouldn’t train. This is likely because I did not standardize it after summing.</p>
+
+<p>With that out of the way, here’s the new neural network:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">neural_network</span><span class="p">(</span><span class="n">X</span><span class="p">,</span> <span class="n">vocab_size</span><span class="p">,</span> <span class="n">lmb</span><span class="p">,</span> <span class="n">embed_dim</span><span class="p">,</span> <span class="n">output_units</span><span class="p">,</span> <span class="n">number_of_features</span><span class="p">):</span>
+    <span class="n">regularizer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">l2_regularizer</span><span class="p">(</span><span class="n">scale</span> <span class="o">=</span> <span class="n">lmb</span><span class="p">)</span>
+
+    <span class="c"># embedding layer</span>
+    <span class="n">embedding</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">embed_sequence</span><span class="p">(</span><span class="n">ids</span> <span class="o">=</span> <span class="n">X</span><span class="p">,</span>
+                                                 <span class="n">vocab_size</span> <span class="o">=</span> <span class="n">vocab_size</span><span class="p">,</span>
+                                                 <span class="n">embed_dim</span> <span class="o">=</span> <span class="n">embed_dim</span><span class="p">,</span>
+                                                 <span class="n">regularizer</span> <span class="o">=</span> <span class="n">regularizer</span><span class="p">,</span>
+                                                 <span class="n">initializer</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">xavier_initializer</span><span class="p">(</span><span class="n">seed</span> <span class="o">=</span> <span class="mi">10100</span><span class="p">))</span>
+    
+    <span class="c"># pooling layer </span>
+    
+    <span class="c"># insert your desired pooling method here.</span>
+    <span class="c"># pooling_layer = </span>
+                              
+    
+    <span class="c"># output layer</span>
+    <span class="n">layer2</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">dense</span><span class="p">(</span><span class="n">pooling_layer</span><span class="p">,</span>
+                             <span class="n">output_units</span><span class="p">,</span>
+                             <span class="n">activation</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">,</span>
+                             <span class="n">use_bias</span><span class="o">=</span><span class="bp">True</span><span class="p">,</span>
+                             <span class="n">kernel_initializer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">contrib</span><span class="o">.</span><span class="n">layers</span><span class="o">.</span><span class="n">xavier_initializer</span><span class="p">(</span><span class="n">seed</span> <span class="o">=</span> <span class="mi">10102</span><span class="p">),</span>
+                             <span class="n">bias_initializer</span><span class="o">=</span><span class="n">tf</span><span class="o">.</span><span class="n">zeros_initializer</span><span class="p">(),</span>
+                             <span class="n">kernel_regularizer</span><span class="o">=</span><span class="n">regularizer</span><span class="p">,</span>
+                             <span class="n">bias_regularizer</span><span class="o">=</span><span class="n">regularizer</span><span class="p">,</span>
+                             <span class="n">trainable</span><span class="o">=</span><span class="bp">True</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">layer2</span></code></pre></figure>
+
+<p>I shuffle my data before every epoch, this introduces variation into training that can prevent the model from converging on a local minima. However, it also introduces random elements into training and I can’t reproduce the same results with the same hyperparameters. On the one hand, this is good because the model is exploring a greater field to search for the optimal solution, but it’s problematic if I can’t obtain the optimal solution before it jumps out of the local minima.</p>
+
+<p>The solution to this is to save a checkpoint file everytime a satisfactory minima is found (set by treshold), and then overwrite this file when a better minima is found. This is a straightforward solution that really increases the efficiency of my training and is simple to implement:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">train_fn</span><span class="p">(</span>
+    <span class="n">filename</span><span class="p">,</span>
+    <span class="n">epoch_start</span><span class="p">,</span>
+    <span class="n">epoch_end</span><span class="p">,</span>
+    <span class="n">treshold</span><span class="p">,</span>
+    <span class="n">restore</span> <span class="o">=</span> <span class="bp">None</span><span class="p">):</span>
+    
+    <span class="n">saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">()</span>
+    <span class="n">epochs</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">cost_list</span> <span class="o">=</span> <span class="p">[]</span>
+    <span class="n">v_cost_list</span> <span class="o">=</span><span class="p">[]</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"Training starts."</span><span class="p">)</span>
+        <span class="k">if</span> <span class="n">restore</span> <span class="o">!=</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">saver</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">restore</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"Restored."</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">tf</span><span class="o">.</span><span class="n">global_variables_initializer</span><span class="p">())</span>
+        <span class="n">total_batches</span> <span class="o">=</span> <span class="nb">int</span><span class="p">(</span><span class="n">trainX</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">batch_size</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">"Neural network architechture:"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Embedding dimension: {embed_dim}, Min max concat dimension: {embed_dim*2}, {trainY.shape[1]} output units."</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">""</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"learning rate: {alpha}"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"regularization: {lmb}"</span><span class="p">)</span>
+        <span class="k">print</span><span class="p">(</span><span class="s">""</span><span class="p">)</span>
+        <span class="n">start</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="n">lowest_v_cost</span> <span class="o">=</span> <span class="n">treshold</span>
+        <span class="k">for</span> <span class="n">e</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">epoch_start</span><span class="p">,</span> <span class="n">epoch_end</span><span class="p">):</span>
+            <span class="n">avg_cost</span> <span class="o">=</span> <span class="mf">0.0</span>
+            <span class="n">shuffled</span> <span class="o">=</span> <span class="n">trainSet</span><span class="o">.</span><span class="n">shuffle</span><span class="p">(</span><span class="n">buffer_size</span> <span class="o">=</span> <span class="n">trainX</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])</span>
+            <span class="n">minibatch</span> <span class="o">=</span> <span class="n">shuffled</span><span class="o">.</span><span class="n">batch</span><span class="p">(</span><span class="n">batch_size</span><span class="p">)</span>
+            <span class="n">mbIter</span> <span class="o">=</span> <span class="n">minibatch</span><span class="o">.</span><span class="n">make_initializable_iterator</span><span class="p">()</span>
+            <span class="n">current_batch</span> <span class="o">=</span> <span class="n">mbIter</span><span class="o">.</span><span class="n">get_next</span><span class="p">()</span>
+            <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">mbIter</span><span class="o">.</span><span class="n">initializer</span><span class="p">)</span>
+            <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">total_batches</span><span class="p">):</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">X</span><span class="p">,</span> <span class="n">y</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">current_batch</span><span class="p">)</span>
+                    <span class="n">c</span><span class="p">,</span> <span class="n">grad</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">([</span><span class="n">loss</span><span class="p">,</span> <span class="n">gvs</span><span class="p">,</span> <span class="n">train_op</span><span class="p">],</span>
+                                          <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">x_data</span> <span class="p">:</span> <span class="n">X</span><span class="p">,</span>
+                                                       <span class="n">y_data</span> <span class="p">:</span> <span class="n">y</span><span class="p">,})</span>
+                    <span class="n">avg_cost</span> <span class="o">+=</span> <span class="n">c</span><span class="o">/</span><span class="n">total_batches</span>
+                <span class="k">except</span> <span class="n">tf</span><span class="o">.</span><span class="n">errors</span><span class="o">.</span><span class="n">OutOfRangeError</span><span class="p">:</span>
+                    <span class="k">print</span><span class="p">(</span><span class="s">"aaaah, out of range!"</span><span class="p">)</span>
+                    <span class="k">break</span>
+            <span class="c"># save session if validation is lowest.</span>
+            <span class="n">v_cost</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">loss</span><span class="p">,</span> <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">x_data</span><span class="p">:</span> <span class="n">validX</span><span class="p">,</span>
+                                                 <span class="n">y_data</span><span class="p">:</span> <span class="n">validY</span><span class="p">})</span>
+            <span class="k">if</span> <span class="n">v_cost</span> <span class="o">&lt;</span> <span class="n">lowest_v_cost</span><span class="p">:</span>
+                <span class="n">lowest_v_cost</span> <span class="o">=</span> <span class="n">v_cost</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{e} of {epoch_end}: New lowest cost found: {v_cost}. Saving..."</span><span class="p">)</span>
+                <span class="n">saver</span><span class="o">.</span><span class="n">save</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="s">"Saved."</span><span class="p">)</span>
+
+            <span class="c"># report</span>
+            <span class="k">if</span> <span class="n">e</span><span class="o">%</span><span class="n">report</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+                <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+                <span class="n">epochs</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
+                <span class="n">cost_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">avg_cost</span><span class="p">)</span>
+                <span class="n">v_cost_list</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">v_cost</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{e} of {epoch_end} epochs. Cost = {avg_cost}. V-cost = {v_cost}. Time taken: {round(end-start, 2)}s."</span><span class="p">)</span>
+                <span class="n">start</span> <span class="o">=</span> <span class="n">end</span>
+        <span class="n">end</span> <span class="o">=</span> <span class="n">time</span><span class="o">.</span><span class="n">time</span><span class="p">()</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{e} of {epochs} epochs. Cost = {avg_cost}. Time taken: {round(end-start, 2)}s."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">epochs</span><span class="p">,</span> <span class="n">cost_list</span><span class="p">,</span> <span class="n">v_cost_list</span></code></pre></figure>
+
+<p>You can see that this function now also returns epochs, training costs, and validation costs. This allows easy plotting and diagnosis. Here’s a plotting function:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">plotLosses</span><span class="p">(</span>
+    <span class="n">epochs</span><span class="p">,</span>
+    <span class="n">cost</span><span class="p">,</span>
+    <span class="n">v_cost</span><span class="p">,</span>
+    <span class="n">filename</span><span class="p">,</span>
+    <span class="n">title</span><span class="p">):</span>
+
+    <span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+    <span class="kn">import</span> <span class="nn">matplotlib</span> <span class="k">as</span> <span class="n">plt</span>
+    <span class="kn">import</span> <span class="nn">seaborn</span> <span class="k">as</span> <span class="n">sns</span>
+
+    <span class="n">fig</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">({</span><span class="s">"epochs"</span> <span class="p">:</span> <span class="n">epochs</span><span class="p">,</span>
+                        <span class="s">"cost"</span> <span class="p">:</span> <span class="n">cost</span><span class="p">,</span>
+                        <span class="s">"validation cost"</span> <span class="p">:</span> <span class="n">v_cost</span><span class="p">})</span>
+    <span class="n">fig</span><span class="o">.</span><span class="n">plot</span><span class="p">(</span><span class="n">x</span> <span class="o">=</span> <span class="s">"epochs"</span><span class="p">,</span> <span class="n">title</span> <span class="o">=</span> <span class="n">title</span><span class="p">)</span>
+    <span class="n">sns</span><span class="o">.</span><span class="n">plt</span><span class="o">.</span><span class="n">savefig</span><span class="p">(</span><span class="n">filename</span><span class="p">)</span>
+
+    <span class="k">return</span></code></pre></figure>
+
+<p>I’ve seperated the prediction from the training, since I’ve added validation loss to the reporting and the plotting feature, it’s superior to the function from Part 2 in terms of monitoring training performance and running diagnostics. But at the end of the day you still want your prediction accuracy:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">test_fn</span><span class="p">(</span>
+    <span class="n">filename</span><span class="p">,</span>
+    <span class="n">X</span><span class="p">,</span>
+    <span class="n">y</span><span class="p">):</span>
+    <span class="n">saver</span> <span class="o">=</span> <span class="n">tf</span><span class="o">.</span><span class="n">train</span><span class="o">.</span><span class="n">Saver</span><span class="p">()</span>
+    <span class="k">with</span> <span class="n">tf</span><span class="o">.</span><span class="n">Session</span><span class="p">()</span> <span class="k">as</span> <span class="n">sess</span><span class="p">:</span>
+        <span class="n">saver</span><span class="o">.</span><span class="n">restore</span><span class="p">(</span><span class="n">sess</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
+        <span class="n">prediction</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">x_data</span> <span class="p">:</span> <span class="n">X</span><span class="p">,</span>
+                                                   <span class="n">x_shape</span> <span class="p">:</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]})</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">test_accur</span> <span class="o">=</span> <span class="n">sess</span><span class="o">.</span><span class="n">run</span><span class="p">(</span><span class="n">pred_accuracy</span><span class="p">,</span> <span class="n">feed_dict</span> <span class="o">=</span> <span class="p">{</span><span class="n">x_data</span> <span class="p">:</span> <span class="n">X</span><span class="p">,</span> <span class="n">y_data</span> <span class="p">:</span> <span class="n">y</span><span class="p">,</span> <span class="n">x_shape</span><span class="p">:</span> <span class="n">X</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]})</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">test_accur</span><span class="p">)</span>
+        <span class="k">except</span> <span class="nb">ValueError</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="s">"No y-value for test_accur calculation."</span><span class="p">)</span>
+        <span class="k">return</span> <span class="n">prediction</span></code></pre></figure>
+
+<h1 id="model-performance">Model performance</h1>
+<p>And so finally our prediction accuracies:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">v_pred</span> <span class="o">=</span> <span class="n">test_fn</span><span class="p">(</span><span class="s">"./scifi_nostem_sqrtn.ckpt"</span><span class="p">,</span> <span class="n">validX</span><span class="p">,</span> <span class="n">validY</span><span class="p">)</span>
+<span class="mf">0.8296983</span> <span class="c"># 82.96%</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">t_pred</span> <span class="o">=</span> <span class="n">test_fn</span><span class="p">(</span><span class="s">"./scifi_nostem_sqrtn.ckpt"</span><span class="p">,</span> <span class="n">testX</span><span class="p">,</span> <span class="n">testY</span><span class="p">)</span>
+<span class="mf">0.82696426</span> <span class="c"># 82.69%</span></code></pre></figure>
+
+<p>Of course, each output node in the neural network actually outputs the probability that each author has written the sentence. Using this data and the prediction, I constructed a dataframe. Here’s a quick look at the columns:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python">                                            <span class="n">sentence</span> <span class="n">author</span> <span class="n">prediction</span>  \
+<span class="mi">0</span>  <span class="s">"What a fool I have been!"</span> <span class="n">he</span> <span class="n">said</span><span class="p">,</span> <span class="ow">and</span> <span class="n">gave</span> <span class="n">w</span><span class="o">...</span>    <span class="n">HGW</span>        <span class="n">HGW</span>   
+<span class="mi">1</span>  <span class="n">A</span> <span class="n">younger</span> <span class="n">student</span> <span class="n">than</span> <span class="n">you</span> <span class="n">were</span><span class="p">,</span> <span class="n">almost</span> <span class="n">an</span> <span class="n">alb</span><span class="o">...</span>    <span class="n">HGW</span>        <span class="n">HGW</span>   
+<span class="mi">2</span>  <span class="n">Then</span><span class="p">,</span> <span class="n">one</span> <span class="n">by</span> <span class="n">one</span><span class="p">,</span> <span class="n">the</span> <span class="n">battleships</span> <span class="n">of</span> <span class="n">Helium</span> <span class="n">su</span><span class="o">...</span>    <span class="n">ERB</span>        <span class="n">ERB</span>   
+<span class="mi">3</span>  <span class="n">His</span> <span class="n">absence</span> <span class="n">will</span> <span class="n">never</span> <span class="n">cause</span> <span class="n">him</span> <span class="n">to</span> <span class="n">be</span> <span class="n">forgott</span><span class="o">...</span>     <span class="n">JV</span>         <span class="n">JV</span>   
+<span class="mi">4</span>                             <span class="s">"That will do exactly.    PKD        HGW   </span><span class="err">
+
+</span><span class="s">   correct       ERB       HGW        JV           PKD  </span><span class="err">
+</span><span class="s">0     True  0.055303  0.991129  0.001417  7.353810e-05  </span><span class="err">
+</span><span class="s">1     True  0.007647  0.847745  0.005377  5.410941e-04  </span><span class="err">
+</span><span class="s">2     True  1.000000  0.000045  0.000212  6.324069e-07  </span><span class="err">
+</span><span class="s">3     True  0.008893  0.039556  0.878804  3.791898e-04  </span><span class="err">
+</span><span class="s">4    False  0.036820  0.310747  0.227493  1.149519e-01 </span></code></pre></figure>
+
+<p>Here I’m going to look at the behaviour of the neural network by separating predictions with high confidence (maximum probability &gt;= 0.5), low confidence (maximum probability &lt; 0.5), and whether the prediction was correct:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># boolean arrays for slicing</span>
+<span class="n">high_confidence</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="nb">max</span><span class="p">(</span><span class="n">t_pred_dataframe</span><span class="p">[[</span><span class="s">"ERB"</span><span class="p">,</span> <span class="s">"HGW"</span><span class="p">,</span> <span class="s">"JV"</span><span class="p">,</span> <span class="s">"PKD"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&gt;=</span> <span class="mf">0.5</span> <span class="p">)</span>
+<span class="n">low_confidence</span> <span class="o">=</span> <span class="p">(</span><span class="n">np</span><span class="o">.</span><span class="nb">max</span><span class="p">(</span><span class="n">t_pred_dataframe</span><span class="p">[[</span><span class="s">"ERB"</span><span class="p">,</span> <span class="s">"HGW"</span><span class="p">,</span> <span class="s">"JV"</span><span class="p">,</span> <span class="s">"PKD"</span><span class="p">]]</span><span class="o">.</span><span class="n">values</span><span class="p">,</span> <span class="mi">1</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mf">0.5</span> <span class="p">)</span>
+<span class="n">correct</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span><span class="s">"correct"</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">)</span>
+<span class="n">wrong</span> <span class="o">=</span> <span class="p">(</span><span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span><span class="s">"correct"</span><span class="p">]</span> <span class="o">==</span> <span class="bp">False</span><span class="p">)</span>
+
+<span class="n">correct_high_confidence</span> <span class="o">=</span> <span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">correct</span><span class="o">&amp;</span><span class="n">high_confidence</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">correct_low_confidence</span> <span class="o">=</span> <span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">correct</span><span class="o">&amp;</span><span class="n">low_confidence</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">wrong_high_confidence</span> <span class="o">=</span> <span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">wrong</span><span class="o">&amp;</span><span class="n">high_confidence</span><span class="p">,</span> <span class="p">:]</span>
+<span class="n">wrong_low_confidence</span> <span class="o">=</span> <span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">wrong</span><span class="o">&amp;</span><span class="n">low_confidence</span><span class="p">,</span> <span class="p">:]</span></code></pre></figure>
+
+<p>By looking at the proportion of prediction and the confidence of the neural network, we see that the neural network predominantly gives out high confidence predictions. Of the low confidence predictions, it’s getting a little bit more than half of them right, which is higher than baseline performance (~30%). This shows that even when the neural network is making low confidence calls, it does better than random guesses.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">correct_high_confidence</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="mf">0.7304595944155712</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">correct_low_confidence</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="mf">0.09650463670640987</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">wrong_high_confidence</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="mf">0.07805971670233364</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">wrong_low_confidence</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">/</span><span class="n">t_pred_dataframe</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span>
+<span class="mf">0.09497605217568532</span></code></pre></figure>
+
+<p>Is the neural network better at predicting some authors than others? Let’s look at precision and recall for each author:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">precision_recall</span><span class="p">(</span><span class="n">prediction</span><span class="p">,</span> <span class="n">truth</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    <span class="s">"""Prediction is a pandas dataframe column of predictions,
+and truth is a pandas dataframe column of truth. Value is the
+value to evaluate.
+
+Returns precision, recall."""</span>
+    <span class="n">prediction</span> <span class="o">=</span> <span class="n">prediction</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">truth</span> <span class="o">=</span> <span class="n">truth</span><span class="o">.</span><span class="n">tolist</span><span class="p">()</span>
+    <span class="n">false_pos</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">true_pos</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="n">false_neg</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="nb">len</span><span class="p">(</span><span class="n">prediction</span><span class="p">)):</span>
+        <span class="k">if</span> <span class="n">truth</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span> <span class="ow">and</span> <span class="n">prediction</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">elif</span> <span class="n">truth</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span> <span class="ow">and</span> <span class="n">prediction</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">true_pos</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">truth</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span> <span class="ow">and</span> <span class="n">prediction</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">false_neg</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">elif</span> <span class="n">truth</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">!=</span> <span class="n">value</span> <span class="ow">and</span> <span class="n">prediction</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">:</span>
+            <span class="n">false_pos</span> <span class="o">+=</span> <span class="mi">1</span>
+    <span class="n">precision</span> <span class="o">=</span> <span class="n">true_pos</span><span class="o">/</span><span class="p">(</span><span class="n">true_pos</span> <span class="o">+</span> <span class="n">false_pos</span><span class="p">)</span>
+    <span class="n">recall</span> <span class="o">=</span> <span class="n">true_pos</span><span class="o">/</span><span class="p">(</span><span class="n">true_pos</span> <span class="o">+</span> <span class="n">false_neg</span><span class="p">)</span>
+
+    <span class="k">return</span> <span class="n">precision</span><span class="p">,</span> <span class="n">recall</span>
+
+
+<span class="o">&gt;&gt;&gt;</span> <span class="n">precision_recall</span><span class="p">(</span><span class="n">t_pred</span><span class="p">[</span><span class="s">"prediction"</span><span class="p">],</span> <span class="n">t_pred</span><span class="p">[</span><span class="s">"author"</span><span class="p">],</span> <span class="s">"JV"</span><span class="p">)</span>
+<span class="p">(</span><span class="mf">0.8244111349036403</span><span class="p">,</span> <span class="mf">0.8455344070278185</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">precision_recall</span><span class="p">(</span><span class="n">t_pred</span><span class="p">[</span><span class="s">"prediction"</span><span class="p">],</span> <span class="n">t_pred</span><span class="p">[</span><span class="s">"author"</span><span class="p">],</span> <span class="s">"ERB"</span><span class="p">)</span>
+<span class="p">(</span><span class="mf">0.8959276018099548</span><span class="p">,</span> <span class="mf">0.8455978975032852</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">precision_recall</span><span class="p">(</span><span class="n">t_pred</span><span class="p">[</span><span class="s">"prediction"</span><span class="p">],</span> <span class="n">t_pred</span><span class="p">[</span><span class="s">"author"</span><span class="p">],</span> <span class="s">"PKD"</span><span class="p">)</span>
+<span class="p">(</span><span class="mf">0.7898936170212766</span><span class="p">,</span> <span class="mf">0.6414686825053996</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">precision_recall</span><span class="p">(</span><span class="n">t_pred</span><span class="p">[</span><span class="s">"prediction"</span><span class="p">],</span> <span class="n">t_pred</span><span class="p">[</span><span class="s">"author"</span><span class="p">],</span> <span class="s">"HGW"</span><span class="p">)</span>
+<span class="p">(</span><span class="mf">0.7787950383933845</span><span class="p">,</span> <span class="mf">0.8476374156219865</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">sum</span><span class="p">(</span><span class="n">t_pred</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span><span class="s">"author"</span><span class="p">]</span> <span class="o">==</span> <span class="s">"JV"</span><span class="p">)</span>
+<span class="mi">2732</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">sum</span><span class="p">(</span><span class="n">t_pred</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span><span class="s">"author"</span><span class="p">]</span> <span class="o">==</span> <span class="s">"PKD"</span><span class="p">)</span>
+<span class="mi">926</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">sum</span><span class="p">(</span><span class="n">t_pred</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span><span class="s">"author"</span><span class="p">]</span> <span class="o">==</span> <span class="s">"ERB"</span><span class="p">)</span>
+<span class="mi">3044</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">sum</span><span class="p">(</span><span class="n">t_pred</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s">"author"</span><span class="p">]</span> <span class="o">==</span> <span class="s">"HGW"</span><span class="p">)</span>
+<span class="mi">3111</span></code></pre></figure>
+
+<p>We see that the model is not very good at predicting Phillip K. Dick’s work, recall is only 64%, meaning only 64% of Phillip K. Dick’s sentences were correctly identified as Phillip K. Dick’s while the rest were wrongly assigned. The model is also not very good with H. G. Wells, who has the lowest precision, meaning only 78% of predicted H. G. Wells works were actually H. G. Wells’. It’s likely that this is due to imbalance in data where Phillip K. Dick only has 926 sentences (his works in the public domain are mostly short stories), and H. G. Wells has the most number of sentences at 3111. This may have caused the model to learn to predict H. G. Wells as it’s more often than not, right.</p>
+
+<p>And now, for the first time since we started, let’s actually look at the sentences… Do you think the model did a good job? What would you have predicted for these sentences?</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="kn">import</span> <span class="nn">pandas</span> <span class="k">as</span> <span class="n">pd</span>
+
+<span class="k">def</span> <span class="nf">print_sentences</span><span class="p">(</span><span class="n">dataframe</span><span class="p">,</span> <span class="n">value</span><span class="p">):</span>
+    
+    <span class="n">correct</span> <span class="o">=</span> <span class="p">(</span><span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s">"correct"</span><span class="p">]</span> <span class="o">==</span> <span class="bp">True</span><span class="p">)</span>
+    <span class="n">wrong</span> <span class="o">=</span> <span class="p">(</span><span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s">"correct"</span><span class="p">]</span> <span class="o">==</span> <span class="bp">False</span><span class="p">)</span>
+    <span class="n">right_author</span> <span class="o">=</span> <span class="p">(</span><span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[:,</span> <span class="s">"author"</span><span class="p">]</span> <span class="o">==</span> <span class="n">value</span><span class="p">)</span>
+
+    <span class="n">correctly_predicted</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">correct</span><span class="o">&amp;</span><span class="n">right_author</span><span class="p">,</span> <span class="p">:]</span>
+    <span class="n">wrongly_predicted</span> <span class="o">=</span> <span class="n">dataframe</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">wrong</span><span class="o">&amp;</span><span class="n">right_author</span><span class="p">,</span> <span class="p">:]</span>
+
+
+    <span class="kn">import</span> <span class="nn">random</span>
+    <span class="n">correct_index</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">correctly_predicted</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="mi">10</span><span class="p">)</span>
+    <span class="n">wrong_index</span> <span class="o">=</span> <span class="n">random</span><span class="o">.</span><span class="n">sample</span><span class="p">(</span><span class="n">wrongly_predicted</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="mi">10</span><span class="p">)</span>
+
+    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Correctly predicted sentences for {value}:"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">correct_index</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">correctly_predicted</span><span class="p">[</span><span class="s">"sentence"</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"author: {correctly_predicted['author'][i]}, prediction: {correctly_predicted['prediction'][i]}"</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">""</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"Wrongly predicted sentences for {value}:"</span><span class="p">)</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">wrong_index</span><span class="p">:</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">i</span><span class="p">,</span> <span class="n">wrongly_predicted</span><span class="p">[</span><span class="s">"sentence"</span><span class="p">][</span><span class="n">i</span><span class="p">])</span>
+        <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"author: {wrongly_predicted['author'][i]}, prediction: {wrongly_predicted['prediction'][i]}"</span><span class="p">)</span></code></pre></figure>
+
+<p>Jules Verne:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">Correctly predicted sentences for JV:
+9810 Fogg was on English ground, it was for my interest to detain
+ him there until my warrant of arrest arrived.
+author: JV, prediction: JV
+confidence: 99.59416999999999%
+
+4403 "Can it be possible?"
+author: JV, prediction: JV
+confidence: 41.13069%
+
+6544  It can't be denied that some species of squid and other 
+devilfish are quite large, though still smaller than cetaceans. 
+Aristotle put the dimensions of one squid at five cubits, or 3.1 
+meters. Our fishermen frequently see specimens over 1.8 meters long.
+The museums in Trieste and Montpellier have preserved some devilfish
+ carcasses measuring two meters.
+author: JV, prediction: JV
+confidence: 100.0%
+
+1902  The air hadn't been renewed in forty-eight hours, and its
+ life-giving qualities were considerably weakened.
+author: JV, prediction: JV
+confidence: 97.016746%
+
+2830  The level seafloor rose imperceptibly. We took long 
+strides, helped by our alpenstocks; but in general our 
+progress was slow, because our feet kept sinking into a 
+kind of slimy mud mixed with seaweed and assorted flat stones.
+author: JV, prediction: JV
+confidence: 88.12849%
+
+521 My uncle ventured beneath the gigantic groves.
+author: JV, prediction: JV
+confidence: 98.159516%
+
+5577  The hatches weren't open. So the air inside hadn't 
+been renewed; but the air tanks were kept full for any 
+eventuality and would function appropriately to shoot 
+a few cubic meters of oxygen into the Nautilus's thin 
+atmosphere.
+author: JV, prediction: JV
+confidence: 99.99950999999999%
+
+2367 The shellfish Meleagrina, that womb for pearls whose valves 
+are nearly equal in size, has the shape of a round shell 
+with thick walls and a very rough exterior.
+author: JV, prediction: JV
+confidence: 98.53917%
+
+2456 We were nearly drawn down by the indraft of the water!
+author: JV, prediction: JV
+confidence: 80.74694%
+
+8206 "There lies our peaceful cemetery, hundreds of feet 
+beneath the surface of the waves!"
+author: JV, prediction: JV
+confidence: 97.35256%<span class="sb">
+
+
+</span>Wrongly predicted sentences for JV:
+4326 I fancy, already, that the air is beginning to be close
+ and condensed.
+author: JV, prediction: HGW
+confidence: 77.47806299999999%
+
+6710 "Trust me, your honour.
+author: JV, prediction: HGW
+confidence: 30.664219999999997%
+
+9745 "But I am going to fight a duel with this gentleman."
+author: JV, prediction: HGW
+confidence: 39.61299%
+
+9366 "Tonight.
+author: JV, prediction: ERB
+confidence: 28.66718%
+
+2248 According to it, we have always been going northward."
+author: JV, prediction: HGW
+confidence: 27.408653%
+
+663 The sensation was as novel as it was painful.
+author: JV, prediction: HGW
+confidence: 54.42406%
+
+4017 The skin was torn from the flesh.
+author: JV, prediction: ERB
+confidence: 75.47415%
+
+4011  But if you wish to do me a favour, you will remain with Aouda.
+author: JV, prediction: ERB
+confidence: 77.88582%
+
+417  Her two masts leaned a trifle backward; she carried brigantine, 
+foresail, storm-jib, and standing-jib, and was well rigged for running 
+before the wind; and she seemed capable of brisk speed, which, 
+indeed, she had already proved by gaining several prizes in pilot-boat races.
+author: JV, prediction: ERB
+confidence: 87.433094%
+
+1757 This man was always practical and thoughtful.
+author: JV, prediction: HGW
+confidence: 38.290006%</code></pre></figure>
+
+<p>H. G. Wells:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">Correctly predicted sentences for HGW:
+265  But in the night my brain, reinforced, I suppose, 
+by the food I had eaten, grew clear again, and I thought.
+author: HGW, prediction: HGW
+confidence: 99.479717%
+
+5765 "It will never do for you to wear that black.
+author: HGW, prediction: HGW
+confidence: 45.821235%
+
+3280 Graham saw his index finger, black and colossal, above 
+the mirrored Council House.
+author: HGW, prediction: HGW
+confidence: 99.958485%
+
+2561 I made myself clear on this point, and from that the 
+Grand Lunar went on to speak with me of sleep.
+author: HGW, prediction: HGW
+confidence: 99.844885%
+
+1190  So far as I could see by the flashes, the houses about
+ me were mostly uninjured.
+author: HGW, prediction: HGW
+confidence: 83.032316%
+
+1905 So soon as they had left the _creche_ he began to speak 
+of the horror the babies in their incubating cases had caused him.
+author: HGW, prediction: HGW
+confidence: 18.327500999999998%
+
+5740 It was like kittens round a beetle.
+author: HGW, prediction: HGW
+confidence: 84.193826%
+
+4987 And of the quality of the black belt administration, and of 
+what that might mean for him he thought, after the fashion of his 
+former days, not at all.
+author: HGW, prediction: HGW
+confidence: 99.85424%
+
+6912 And the keenness of the more rarefied air into which they
+ ascended produced a sense of lightness and exhilaration.
+author: HGW, prediction: HGW
+confidence: 99.284863%
+
+2064 'When are you going to publish this work of yours?' was
+ his everlasting question. And the students, the cramped means!
+author: HGW, prediction: HGW
+confidence: 96.14959400000001%<span class="sb">
+
+
+</span>Wrongly predicted sentences for HGW:
+9083 "Oh!
+author: HGW, prediction: JV
+confidence: 64.95349%
+
+4507 What was it?
+author: HGW, prediction: PKD
+confidence: 22.985387%
+
+7726  But probable as this seems, it is by no means a proven conclusion.
+author: HGW, prediction: JV
+confidence: 96.221954%
+
+9628 What is their hope?
+author: HGW, prediction: JV
+confidence: 32.38659%
+
+9412 What woman would do a thing like that?
+author: HGW, prediction: JV
+confidence: 36.88852%
+
+4763 The thing's too mad."
+author: HGW, prediction: ERB
+confidence: 20.49275%
+
+4651 Lively brave fellows.
+author: HGW, prediction: ERB
+confidence: 43.097426999999996%
+
+5075 With a tendency to the hemisphere in hats.
+author: HGW, prediction: JV
+confidence: 62.09724%
+
+2315  Mind you, it isn't all of us that are made for wild 
+beasts; and that's what it's got to be.
+author: HGW, prediction: JV
+confidence: 13.779907999999999%
+
+3194 "Let me have a stick or something, and I'll go down 
+to the station and get the bloodhounds put on.
+author: HGW, prediction: PKD
+confidence: 47.158834%</code></pre></figure>
+
+<p>Edgar Rice Burroughs:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">orrectly predicted sentences for ERB:
+1433 "Why did you not come to me with your apprehensions?" 
+demanded O-Tar. "Be this loyalty?"
+author: ERB, prediction: ERB
+confidence: 58.941984000000005%
+
+9450 I did not take conscious aim; and yet at each report 
+a beast crumpled in its tracks!
+author: ERB, prediction: ERB
+confidence: 88.076025%
+
+2065 The girl was coming almost at a run--she was at my side immediately.
+author: ERB, prediction: ERB
+confidence: 99.85104%
+
+9241  Why neither Victory nor I were struck is a miracle.
+author: ERB, prediction: ERB
+confidence: 84.35127%
+
+5600 "It is too far," said Ghek.
+author: ERB, prediction: ERB
+confidence: 97.66386%
+
+2180 At the far side of the outer court a narrow door let 
+into the angle made by one of the buttresses with the wall.
+author: ERB, prediction: ERB
+confidence: 76.571316%
+
+9600 "And who is Buckingham," I asked, "and why should 
+he wish to kill me?"
+author: ERB, prediction: ERB
+confidence: 99.98405%
+
+975  Also, Sari was upon a lofty plateau at the southern end 
+of a mighty gulf of the Great Ocean.
+author: ERB, prediction: ERB
+confidence: 91.842717%
+
+7399  Too, she was queen of England.
+author: ERB, prediction: ERB
+confidence: 86.157095%
+
+3773  Then they rose slowly to a position within the centre of the circle.
+author: ERB, prediction: ERB
+confidence: 82.23246999999999%<span class="sb">
+
+
+</span>Wrongly predicted sentences for ERB:
+8820 .
+author: ERB, prediction: HGW
+confidence: 22.762254000000002%
+
+1183  I could not understand it.
+author: ERB, prediction: HGW
+confidence: 36.355224%
+
+8961 With these words he left us.
+author: ERB, prediction: JV
+confidence: 53.94627%
+
+731  But one would have been enough to have taken 
+us could it have come alongside.
+author: ERB, prediction: JV
+confidence: 72.816074%
+
+5947  In it were four paddles.
+author: ERB, prediction: HGW
+confidence: 19.866213%
+
+4597  I felt around.
+author: ERB, prediction: PKD
+confidence: 30.185854%
+
+489 And we were out of sight of land without a single 
+celestial body to guide us!
+author: ERB, prediction: JV
+confidence: 92.419404%
+
+5889 These he tried only to find each securely locked.
+author: ERB, prediction: JV
+confidence: 18.941760000000002%
+
+2085 The farther inland we went the darker it became, until
+ we were moving at last through an endless twilight.
+author: ERB, prediction: HGW
+confidence: 71.614915%
+
+6957 Good!
+author: ERB, prediction: JV
+confidence: 36.096844%</code></pre></figure>
+
+<p>Here we see the importance of data cleaning. A mistake in cleaning actually assigned a single period to H.G.Wells!</p>
+
+<p>Phillip K. Dick:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown">Correctly predicted sentences for PKD:
+3078 Then, very slowly, the hatch slid back.
+author: PKD, prediction: PKD
+confidence: 42.422529999999995%
+
+5334 "Didn't any of your instruments tell you the bubble was loaded?"
+author: PKD, prediction: PKD
+confidence: 28.161199999999997%
+
+1142 "Let's see what he does when we enter the moon's pull," Kramer said.
+ "He was a good mathematician, the old man.
+author: PKD, prediction: PKD
+confidence: 72.59078%
+
+6958 "Are we there?" David said.
+author: PKD, prediction: PKD
+confidence: 69.35124%
+
+2333 He spun dizzily and fell through the cloud of fire, down into a 
+pit of darkness, a vast gulf between two hills.
+author: PKD, prediction: PKD
+confidence: 70.72348000000001%
+
+6986 It has an injured jet and is moving slowly back toward Terra, 
+away from the line."
+author: PKD, prediction: PKD
+confidence: 96.82027%
+
+8089 He had been right about the bomb, after all.
+author: PKD, prediction: PKD
+confidence: 73.46614%
+
+97 On the ground, the surface cars halted beyond the danger area, 
+waiting for the missile attack to finish.
+author: PKD, prediction: PKD
+confidence: 98.15471%
+
+4590 The bus was slowing down.
+author: PKD, prediction: PKD
+confidence: 71.901804%
+
+2904 "Reinhart!
+author: PKD, prediction: PKD
+confidence: 50.311130000000006%<span class="sb">
+
+
+</span>Wrongly predicted sentences for PKD:
+3081 It must be difficult to wire such minute relays."
+author: PKD, prediction: HGW
+confidence: 24.03362%
+
+6147 "Is he sick?
+author: PKD, prediction: JV
+confidence: 34.408027000000004%
+
+9726 He tripped over a garbage can and ran up a flight of concrete steps.
+author: PKD, prediction: HGW
+confidence: 55.332919999999994%
+
+5689 "No--listen!"
+author: PKD, prediction: JV
+confidence: 53.620504999999994%
+
+2825 Radiation pools?
+author: PKD, prediction: HGW
+confidence: 25.114494999999998%
+
+9138 It rested quietly, suspended in its mesh frame, like a blunt needle.
+author: PKD, prediction: JV
+confidence: 97.10334%
+
+5147 "It only takes one of them.
+author: PKD, prediction: HGW
+confidence: 32.925415%
+
+7265 Have the tunnel opened for me at once."
+author: PKD, prediction: JV
+confidence: 21.332003%
+
+948 I didn't touch a thing.
+author: PKD, prediction: HGW
+confidence: 56.708395%
+
+7379 "They sense that I'm different, more like their own organic 
+mines. They don't like it.
+author: PKD, prediction: HGW
+confidence: 51.07299%</code></pre></figure>
+
+<p>It seems that most of the sentences that the model got wrong are quite short. Is this the case? If we look at the length of the strings in <code class="highlighter-rouge">sentence</code> column of the data, it does appear that wrongly predicted sentences are distributed around a shorter length:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">t_pred_correct</span><span class="p">[</span><span class="s">"sentence length"</span><span class="p">]</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+<span class="n">count</span>    <span class="mf">8115.000000</span>
+<span class="n">mean</span>      <span class="mf">109.507825</span>
+<span class="n">std</span>        <span class="mf">92.716896</span>
+<span class="nb">min</span>         <span class="mf">1.000000</span>
+<span class="mi">25</span><span class="o">%</span>        <span class="mf">44.000000</span>
+<span class="mi">50</span><span class="o">%</span>        <span class="mf">86.000000</span>
+<span class="mi">75</span><span class="o">%</span>       <span class="mf">148.000000</span>
+<span class="nb">max</span>      <span class="mf">1124.000000</span>
+<span class="n">Name</span><span class="p">:</span> <span class="n">sentence</span> <span class="n">length</span><span class="p">,</span> <span class="n">dtype</span><span class="p">:</span> <span class="n">float64</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">t_pred_wrong</span><span class="p">[</span><span class="s">"sentence length"</span><span class="p">]</span><span class="o">.</span><span class="n">describe</span><span class="p">()</span>
+<span class="n">count</span>    <span class="mf">1698.000000</span>
+<span class="n">mean</span>       <span class="mf">59.000000</span>
+<span class="n">std</span>        <span class="mf">54.643496</span>
+<span class="nb">min</span>         <span class="mf">1.000000</span>
+<span class="mi">25</span><span class="o">%</span>        <span class="mf">23.000000</span>
+<span class="mi">50</span><span class="o">%</span>        <span class="mf">42.000000</span>
+<span class="mi">75</span><span class="o">%</span>        <span class="mf">79.000000</span>
+<span class="nb">max</span>       <span class="mf">578.000000</span></code></pre></figure>
+
+<p><img src="https://suanchinyeo.github.io/assets/scifi_sentencelength.png" alt="scifi_sentence_length" /></p>
+
+<p>And that’s it! I must say, although throughout this project I have been pushing for higher and higher prediction accuracies, looking at the sentences, I’m fairly impressed that the model got so many sentences right.</p>
+
+<p>There are many more things that can be done that may improve this model. And I may revisit this in the future.</p>
+
+
+</div>
+
+<div class="pagination">
+  
+  
+    <a href="/2018-04-30/scifi2" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+      <span>
+        &copy; <time datetime="2018-05-04 02:29:55 -0400">2018</time> Suan Chin Yeo. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme. Icons made by <a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>
+      </span>
+    </footer>
+  </body>
+</html>
