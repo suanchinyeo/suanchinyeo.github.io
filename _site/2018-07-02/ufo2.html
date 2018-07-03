@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      NUFORC UFO sighting reports, Part II: Exploratory Data visualisations &middot; suanchinyeo
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <!-- Begin Jekyll SEO tag v2.4.0 -->
+<title>NUFORC UFO sighting reports, Part II: Exploratory Data visualisations | suanchinyeo</title>
+<meta name="generator" content="Jekyll v3.7.3" />
+<meta property="og:title" content="NUFORC UFO sighting reports, Part II: Exploratory Data visualisations" />
+<meta name="author" content="Suan Chin Yeo" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="National UFO Reporting Centre was founded in 1974 and have been active in collecting reports of UFO sightings through hotline and online forms to this day and provides data of reports they receive online. The particular dataset I use was obtained here. The reports in this dataset were collected up till August of 2017. People wishing to report a sighting may call the Center’s hotline (only for sightings occuring within a week), a web form is available for other reports." />
+<meta property="og:description" content="National UFO Reporting Centre was founded in 1974 and have been active in collecting reports of UFO sightings through hotline and online forms to this day and provides data of reports they receive online. The particular dataset I use was obtained here. The reports in this dataset were collected up till August of 2017. People wishing to report a sighting may call the Center’s hotline (only for sightings occuring within a week), a web form is available for other reports." />
+<link rel="canonical" href="http://localhost:4000/2018-07-02/ufo2" />
+<meta property="og:url" content="http://localhost:4000/2018-07-02/ufo2" />
+<meta property="og:site_name" content="suanchinyeo" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-07-02T00:00:00-04:00" />
+<script type="application/ld+json">
+{"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2018-07-02/ufo2"},"author":{"@type":"Person","name":"Suan Chin Yeo"},"description":"National UFO Reporting Centre was founded in 1974 and have been active in collecting reports of UFO sightings through hotline and online forms to this day and provides data of reports they receive online. The particular dataset I use was obtained here. The reports in this dataset were collected up till August of 2017. People wishing to report a sighting may call the Center’s hotline (only for sightings occuring within a week), a web form is available for other reports.","@type":"BlogPosting","headline":"NUFORC UFO sighting reports, Part II: Exploratory Data visualisations","dateModified":"2018-07-02T00:00:00-04:00","datePublished":"2018-07-02T00:00:00-04:00","url":"http://localhost:4000/2018-07-02/ufo2","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+
+  <body>
+    <nav class="nav">
+      <div class="nav-container">
+        <a href="/">
+          <h2 class="nav-title">suanchinyeo</h2>
+        </a>
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/">Posts</a></li>
+        </ul>
+    </div>
+  </nav>
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Suan Chin Yeo
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2018-07-02 00:00:00 -0400">July 02, 2018</time>
+    
+  </div>
+
+  <h1 class="post-title">NUFORC UFO sighting reports, Part II: Exploratory Data visualisations</h1>
+  <div class="post-line"></div>
+
+  <p><a href="http://www.nuforc.org/">National UFO Reporting Centre</a> was founded in 1974 and have been active in collecting reports of UFO sightings through hotline and online forms to this day and provides data of reports they receive online. The particular dataset I use was obtained <a href="https://data.world/timothyrenner/ufo-sightings">here</a>. The reports in this dataset were collected up till August of 2017. People wishing to report a sighting may call the Center’s hotline (only for sightings occuring within a week), a web form is available for other reports.</p>
+
+<p><em>Allow me to preface this by saying … I intentionally did this exclusively in Python because while I am equally comfortable with both, I worked with R exclusively for a lot of my bioinformatics projects, and have never resisted dabbling into ggplot2 when I use Python. Until now. This is to demonstrate that I can do both, and subsequently, ggplot2 is still so much better. All visualizations produced with Seaborn and Matplotlib packages (Matplotlib’s basemap module was used to generate maps).</em></p>
+
+<h2 id="ufo-reports-over-time">UFO reports over time</h2>
+
+<p>Reports of UFO sightings increased dramatically around 1950’s, and continued increasing until 2014, with decreases observed between then and 2016. Data collection for 2017 is not complete (up to August 24th), therefore, the 2017 year is dropped completely in the second plot.</p>
+
+<p><img src="https://suanchinyeo.github.io/assets/ufo/ufo_timeseries.png" alt="timeseries" /></p>
+
+<p>Interestingly, despite NUFORC being founded in 1974, the earliest UFO sighting in the data was on <code class="highlighter-rouge">1561-04-14</code>, reported on <code class="highlighter-rouge">2012-08-09</code>:</p>
+
+<p><em>I would think that Hanz Glaser had better things to do than spend months on a wood carving that was too ugly to sell. It’s a map.  A very accurate one for its day. If there were to be hard evidence on earth it would be behind the old church in the carving.  Look at the picture…maybe more than one ship. It might be a very interesting dig. ((NUFORC Note:  Witness elects to provide no contact information.  PD))</em></p>
+
+<p>So it’s not an eye witness account. In fact, there is exactly 514379 days between the time of the “sighting” and the report. This is an exception to the rule, as most reports were made within days of the sighting:</p>
+
+<p><img src="https://suanchinyeo.github.io/assets/ufo/ufo_dayshist.png" alt="histogram of days difference" /></p>
+
+<p>Some quick reporting (yes, I could’ve made a function for this).</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="c"># reports made before the actual sighting</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">condition</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ufo</span><span class="p">[</span><span class="s">"date_difference"</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">0</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">" {condition} or {100*condition/ufo.shape[0]}</span><span class="si">% </span><span class="s">of reports were made prior to the sighting!"</span><span class="p">)</span>
+ <span class="mi">2253</span> <span class="ow">or</span> <span class="mf">2.009902315000669</span><span class="o">%</span> <span class="n">of</span> <span class="n">reports</span> <span class="n">were</span> <span class="n">made</span> <span class="n">prior</span> <span class="n">to</span> <span class="n">the</span> <span class="n">sighting</span><span class="err">!</span>
+
+<span class="c"># reports made within a week after the sighting</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">condition</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">((</span><span class="n">ufo</span><span class="p">[</span><span class="s">'date_difference'</span><span class="p">]</span> <span class="o">&lt;</span> <span class="mi">7</span><span class="p">)</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">ufo</span><span class="p">[</span><span class="s">'date_difference'</span><span class="p">]</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">))</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">" {condition} or {100*condition/ufo.shape[0]}</span><span class="si">% </span><span class="s">of reports were made within a week of a sighting"</span><span class="p">)</span>
+ <span class="mi">73166</span> <span class="ow">or</span> <span class="mf">65.27142156206789</span><span class="o">%</span> <span class="n">of</span> <span class="n">reports</span> <span class="n">were</span> <span class="n">made</span> <span class="n">within</span> <span class="n">a</span> <span class="n">week</span> <span class="n">of</span> <span class="n">a</span> <span class="n">sighting</span>
+
+<span class="c"># reports made on the same day</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="n">condition</span> <span class="o">=</span> <span class="nb">sum</span><span class="p">(</span><span class="n">ufo</span><span class="p">[</span><span class="s">"date_difference"</span><span class="p">]</span> <span class="o">==</span> <span class="mi">0</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">" {condition} or {100*condition/ufo.shape[0]}</span><span class="si">% </span><span class="s">of reports were made on the same day of the sighting."</span><span class="p">)</span>
+ <span class="mi">36539</span> <span class="ow">or</span> <span class="mf">32.596458361211475</span><span class="o">%</span> <span class="n">of</span> <span class="n">reports</span> <span class="n">were</span> <span class="n">made</span> <span class="n">on</span> <span class="n">the</span> <span class="n">same</span> <span class="n">day</span> <span class="n">of</span> <span class="n">the</span> <span class="n">sighting</span><span class="o">.</span></code></pre></figure>
+
+<h2 id="ufo-reports-by-location">UFO reports by location</h2>
+
+<p>Although NUFORC is a national service, it does receive reports from all over the world, as evidenced in the dataset. Over time, reports become more numerous, both within the US and internationally.</p>
+
+<p><img src="https://suanchinyeo.github.io/assets/ufo/ufo_timemap.png" alt="map of timeseries" /></p>
+
+<h2 id="ufo-reports-by-shapes">UFO reports by shapes</h2>
+
+<p>For each report, a shape is assigned to the UFO sighted. Some shapes are more popular than others. And some shapes, such as <code class="highlighter-rouge">delta</code>, <code class="highlighter-rouge">pyramid</code>, <code class="highlighter-rouge">crescent</code>, <code class="highlighter-rouge">round</code>, <code class="highlighter-rouge">flare</code>, <code class="highlighter-rouge">dome</code>, <code class="highlighter-rouge">changed</code> (which may be the same as <code class="highlighter-rouge">changing</code>, but left as is because I’m not sure), were introduced fairly recently.</p>
+
+<p><img src="https://suanchinyeo.github.io/assets/ufo/ufo_shapestimeseries.png" alt="shapes over time" /></p>
+
+<p>When we look at the distribution of sightings by shape, there isn’t a clear pattern of UFO of different shapes favouring different regions.</p>
+
+<p><img src="https://suanchinyeo.github.io/assets/ufo/ufo_shapesmap.png" alt="shapes map" /></p>
+
+<p>That’s it for now.</p>
+
+<p>I will probably analyze the actual texts of the reports next.</p>
+
+
+
+</div>
+
+<div class="pagination">
+  
+  
+    <a href="/2018-06-30/ufo1" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+      <span>
+        &copy; <time datetime="2018-07-03 03:51:08 -0400">2018</time> Suan Chin Yeo. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme. Icons made by <a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>
+      </span>
+    </footer>
+  </body>
+</html>

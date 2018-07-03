@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+
+  <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>
+    
+      NUFORC UFO sighting reports, Part I: Geocoding for UFO sightings &middot; suanchinyeo
+    
+  </title>
+
+  <!-- CSS -->
+  <link rel="stylesheet" href="/assets/main.css">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Libre+Baskerville:400,400i,700">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16x16.png">
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+  <!-- Begin Jekyll SEO tag v2.4.0 -->
+<title>NUFORC UFO sighting reports, Part I: Geocoding for UFO sightings | suanchinyeo</title>
+<meta name="generator" content="Jekyll v3.7.3" />
+<meta property="og:title" content="NUFORC UFO sighting reports, Part I: Geocoding for UFO sightings" />
+<meta name="author" content="Suan Chin Yeo" />
+<meta property="og:locale" content="en_US" />
+<meta name="description" content="For thousands more years the mighty ships tore across the empty wastes of space and finally dived screaming on to the first planet they came across - which happened to be the Earth - where due to a terrible miscalculation of scale the entire battle fleet was accidentally swallowed by a small dog. - Hitchhiker’s Guide to the Galaxy, Adam Douglas" />
+<meta property="og:description" content="For thousands more years the mighty ships tore across the empty wastes of space and finally dived screaming on to the first planet they came across - which happened to be the Earth - where due to a terrible miscalculation of scale the entire battle fleet was accidentally swallowed by a small dog. - Hitchhiker’s Guide to the Galaxy, Adam Douglas" />
+<link rel="canonical" href="http://localhost:4000/2018-06-30/ufo1" />
+<meta property="og:url" content="http://localhost:4000/2018-06-30/ufo1" />
+<meta property="og:site_name" content="suanchinyeo" />
+<meta property="og:type" content="article" />
+<meta property="article:published_time" content="2018-06-30T00:00:00-04:00" />
+<script type="application/ld+json">
+{"mainEntityOfPage":{"@type":"WebPage","@id":"http://localhost:4000/2018-06-30/ufo1"},"author":{"@type":"Person","name":"Suan Chin Yeo"},"description":"For thousands more years the mighty ships tore across the empty wastes of space and finally dived screaming on to the first planet they came across - which happened to be the Earth - where due to a terrible miscalculation of scale the entire battle fleet was accidentally swallowed by a small dog. - Hitchhiker’s Guide to the Galaxy, Adam Douglas","@type":"BlogPosting","headline":"NUFORC UFO sighting reports, Part I: Geocoding for UFO sightings","dateModified":"2018-06-30T00:00:00-04:00","datePublished":"2018-06-30T00:00:00-04:00","url":"http://localhost:4000/2018-06-30/ufo1","@context":"http://schema.org"}</script>
+<!-- End Jekyll SEO tag -->
+
+</head>
+
+
+  <body>
+    <nav class="nav">
+      <div class="nav-container">
+        <a href="/">
+          <h2 class="nav-title">suanchinyeo</h2>
+        </a>
+        <ul>
+          <li><a href="/about">About</a></li>
+          <li><a href="/">Posts</a></li>
+        </ul>
+    </div>
+  </nav>
+
+    <main>
+      <div class="post">
+  <div class="post-info">
+    <span>Written by</span>
+    
+        Suan Chin Yeo
+    
+
+    
+      <br>
+      <span>on&nbsp;</span><time datetime="2018-06-30 00:00:00 -0400">June 30, 2018</time>
+    
+  </div>
+
+  <h1 class="post-title">NUFORC UFO sighting reports, Part I: Geocoding for UFO sightings</h1>
+  <div class="post-line"></div>
+
+  <p><em>For thousands more years the mighty ships tore across the empty wastes of space and finally dived screaming on to the first planet they came across - which happened to be the Earth - where due to a terrible miscalculation of scale the entire battle fleet was accidentally swallowed by a small dog.</em> - Hitchhiker’s Guide to the Galaxy, Adam Douglas</p>
+
+<h1 id="source">Source</h1>
+<p>There are many versions of UFO sightings dataset, I got mine <a href="https://data.world/timothyrenner/ufo-sightings">here</a>. It is minimally cleaned, but has enough information for me to do the cleaning myself. Which I quite like since it allows me to ensure data quality at the same time.</p>
+
+<h1 id="missing-data">Missing Data</h1>
+<p>At the beginning, I had these columns:</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown"><span class="p">-----------------------------------</span>
+columns           | missing values
+------------------+----------------
+summary           | 36
+city              | 244
+state             | 8373
+date_time         | 2369
+shape             | 3515
+duration          | 3713
+stats             | 53
+report_link       | 0
+text              | 54
+posted            | 2369
+city_latitude     | 22736
+city_longitude    | 22736</code></pre></figure>
+
+<p>A quick look at the data will show that the <code class="highlighter-rouge">stats</code> column provides information for every column except <code class="highlighter-rouge">summary</code>, <code class="highlighter-rouge">text</code>, <code class="highlighter-rouge">report_link</code>,<code class="highlighter-rouge">city_latitude</code>, <code class="highlighter-rouge">city_longitude</code>. We can fill in a lot of these columns with the following function:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">fill_na</span><span class="p">(</span><span class="n">data</span><span class="p">,</span>
+            <span class="n">column_missing</span><span class="p">,</span>
+            <span class="n">column_source</span><span class="p">,</span>
+            <span class="n">before</span><span class="p">,</span>
+            <span class="n">after</span><span class="p">,</span>
+            <span class="n">min_length</span><span class="p">):</span>
+    <span class="s">""" Takes the following as input:
+            data {pandas dataframe} : data
+            column_missing {string} : name of column that needs filling
+            column_source {string} : name of column with data to fill missing
+                                     data
+            before: {list of string} : string(s) that occur before the data
+                                       needed to fill na.
+            after: {list of string} : string(s) that occur after the data
+                                      needed to fill na.
+        Reports errors.
+        Returns:
+            data {pandas dataframe} : data with nas filled if data is available."""</span>
+    <span class="n">missing</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="n">column_missing</span><span class="p">]</span><span class="o">.</span><span class="n">isna</span><span class="p">()</span>
+    <span class="n">missing_index</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">arange</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">shape</span><span class="p">[</span><span class="mi">0</span><span class="p">])[</span><span class="n">missing</span><span class="o">.</span><span class="n">values</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">missing_index</span><span class="p">:</span>
+        <span class="n">source</span> <span class="o">=</span> <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">column_source</span><span class="p">]</span>
+        <span class="n">before_index</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="k">for</span> <span class="n">b</span> <span class="ow">in</span> <span class="n">before</span><span class="p">:</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">index</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">b</span><span class="p">)</span><span class="o">+</span><span class="nb">len</span><span class="p">(</span><span class="n">b</span><span class="p">)</span>
+            <span class="k">except</span><span class="p">:</span>
+                <span class="k">continue</span>
+            <span class="n">before_index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">before_index</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{i}: Unable to find {before}. </span><span class="se">\n</span><span class="s"> {source} </span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">after</span> <span class="o">==</span> <span class="bp">None</span><span class="p">:</span>
+            <span class="n">after_index</span> <span class="o">=</span> <span class="p">[</span><span class="nb">len</span><span class="p">(</span><span class="n">source</span><span class="p">)]</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">after_index</span> <span class="o">=</span> <span class="p">[]</span>
+            <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">after</span><span class="p">:</span>
+                <span class="k">try</span><span class="p">:</span>
+                    <span class="n">index</span> <span class="o">=</span> <span class="n">source</span><span class="o">.</span><span class="n">index</span><span class="p">(</span><span class="n">a</span><span class="p">)</span>
+                    <span class="n">after_index</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">index</span><span class="p">)</span>
+                <span class="k">except</span><span class="p">:</span>
+                    <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">after_index</span><span class="p">)</span> <span class="o">&lt;</span> <span class="mi">1</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{i}: Unable to find {after}. </span><span class="se">\n</span><span class="s"> {source} </span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="n">min_index</span> <span class="o">=</span> <span class="nb">max</span><span class="p">(</span><span class="n">before_index</span><span class="p">)</span>
+        <span class="n">max_index</span> <span class="o">=</span> <span class="nb">min</span><span class="p">(</span><span class="n">after_index</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">replacement</span> <span class="o">=</span> <span class="n">source</span><span class="p">[</span><span class="n">min_index</span><span class="p">:</span><span class="n">max_index</span><span class="p">]</span><span class="o">.</span><span class="n">strip</span><span class="p">()</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{i}: Can't replace. </span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">" min_index = {min_index}, max_index = {max_index} </span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">" source: {source}"</span><span class="p">)</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">replacement</span><span class="p">)</span> <span class="o">&lt;</span> <span class="n">min_length</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="n">column_missing</span><span class="p">]</span> <span class="o">=</span> <span class="n">replacement</span>
+    <span class="k">return</span> <span class="n">data</span></code></pre></figure>
+
+<p>After filling in data with existing data in the dataset (from <code class="highlighter-rouge">stats</code> column):</p>
+
+<figure class="highlight"><pre><code class="language-markdown" data-lang="markdown"><span class="p">--------------------------------------------------------------------------</span>
+columns           | missing values | now       | notes
+------------------+----------------+-----------+--------------------------
+summary           | 36             | 36        | did nothing
+city              | 244            | dropped   | replaced by "Location"
+state             | 8373           | dropped   | replaced by "Location"
+date_time         | 2369           | 63        | older dates were missing
+shape             | 3515           | 3515      | filled from stats
+duration          | 3713           | 3708      | filled from stats
+stats             | 53             | 53        | did nothing
+report_link       | 0              | 0         | did nothing
+text              | 54             | 54        | did nothing
+posted            | 2369           | dropped   | replaced by "reported"
+city_latitude     | 22736          | 22715     | filled w/ existing data
+city_longitude    | 22736          | 22715     | filled w/ existing data
+
+<span class="gh">new columns:
+-------------------------------------------------------------------------
+</span>columns           | missing values | notes
+------------------+----------------+-------------------------------------
+Location          | 53             | will be easier to geocode
+reported          | 103            | more meaningful than "posted"</code></pre></figure>
+
+<h1 id="where-exactly">Where exactly?</h1>
+<p>So as indicated in the table, we are only missing 53 locations. A quick glance at the actual text will reveal that many people who reported to this service elected to remain anonymous. Some of them were not describing unidentified flying objects but abduction experiences that happened at home or other locations. So it makes sense that some fields are left out, including the location field.</p>
+
+<p>As for the remaining locations, most of them are not detailed addresses. Most of them are cities and states/provinces speckled across the globe. It would be very nice to plot the location data on maps. Therefore, we need the longitude and latitude of these locations.</p>
+
+<p>Obviously, we can google our addresses/descriptions of locations and get the coordinates. With 30 thousand unique locations, we can’t do it by hand. We need to automatically request information from Google. However, this is a costly service for Google if we bombard 30 thousand every minute for the whole day. <em>Geocoding is expensive.</em> For unlimited and fast service, <em>we have to pay</em>. Or be able to host our own 20GB server ( DataScienceToolkit ), which obviously involves paying.</p>
+
+<p>I’m doing this free and slow. Google allows, for free, a usage limit of 2500 queries per day at the rate of 50 requests per second. There are many other geocoding options. You can use another service once you hit the limit with one and so maximize your output perday without paying. But not all geocoding options are created equal. For example, DataScienceToolkit only has street level detail for locations in the US and UK. These are things to check and take into account when making choices.</p>
+
+<p>For this project, most of the locations are geocoded for the dataset by the contributer who scraped for this dataset.</p>
+
+<p>Google meets its match:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="mi">1519</span><span class="p">:</span> <span class="n">error</span> <span class="ow">in</span> <span class="n">response</span><span class="err">!</span> 
+ <span class="n">Location</span><span class="p">:</span> <span class="n">Moon</span> <span class="p">(</span><span class="n">near</span> <span class="n">the</span> <span class="n">moon</span> <span class="n">surface</span><span class="p">),</span><span class="o">.</span>
+
+<span class="p">{</span><span class="s">'results'</span><span class="p">:</span> <span class="p">[],</span> <span class="s">'status'</span><span class="p">:</span> <span class="s">'ZERO_RESULTS'</span><span class="p">}</span></code></pre></figure>
+
+<p>That’s actually pretty funny, it would be interesting to see how many people called in, describing an experience that wasn’t on the earth surface. Hopefully by the time we’re done, we would only have 100 or so missing values and we’ll manually inspect them for extraplanetary elements.</p>
+
+<h1 id="ok-anyway-geocoding">Ok anyway, geocoding:</h1>
+<h2 id="1-get-a-google-api-key">1. Get a Google API key</h2>
+<p><a href="https://developers.google.com/maps/documentation/geocoding/get-api-key">Here</a>. Like all things Google, it’s very easy to set up.</p>
+
+<h2 id="2-reduce-workload-by-removing-redundancies">2. Reduce workload by removing redundancies</h2>
+<p>We can remove duplicates from <code class="highlighter-rouge">Locations</code>. I wasn’t expecting this to do much, but surprisingly, there are only about 30k unique locations in 110k entries.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="n">ufo</span><span class="o">.</span><span class="n">shape</span>
+<span class="p">(</span><span class="mi">112095</span><span class="p">,</span> <span class="mi">11</span><span class="p">)</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">ufo</span><span class="o">.</span><span class="n">Location</span><span class="o">.</span><span class="n">unique</span><span class="p">())</span>
+<span class="mi">30431</span></code></pre></figure>
+
+<p>Many locations have been geocoded before, when we remove those, there were only about 14k unique locations that need geocoding. Using only Google API, we can get this done in 6 days. If you’re new to geocoding, it’s going to feel ridiculous that 14k datapoints will take 6 days to obtain because you may be used to having lightning fast results from computing tasks. But some operations are computationally expensive. But this is an acceptable timeline for me since there are other analysis we can do in the meantime.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">locs_w_geocode</span><span class="p">)</span>
+<span class="mi">16014</span> <span class="c"># locations with geocode</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="nb">len</span><span class="p">(</span><span class="n">locs_wo_geocode</span><span class="p">)</span>
+<span class="mi">14418</span> <span class="c"># need to be geocoded</span></code></pre></figure>
+
+<h2 id="3-dealing-with-api-limits-and-catching-errors">3. Dealing with API limits and catching errors</h2>
+<p>There are several things to take into account while geocoding. Firstly, we need to read and understand the rules of the service we’re using. For example, Google allows 2500 queries per day, and a certain amount of queries per second. An error will be thrown and the process terminated if the code goes beyond this limit. Secondly, because it’s not feasible for me to look through each entry, there are very likely queries that will result in Google throwing an error (joke entries, invalid format, typos, lack of information, etc.). If we are making 500 queries in one go, and there’s an error at the 500th query, we need to ensure we do not lose the results from the first 499 queries. And finally, we need a function that would stop when there’s an error and report that error, so we may manually correct it and restart the process.</p>
+
+<p>The following <code class="highlighter-rouge">geocode</code> function does all of this. There’s a sleep timer to slow down the search as this is not a time sensitve task for me, it was going to take 6 days anyway, does it matter if it takes 10 minutes or one hour per day? Not at all, so there’s really no need to hit the top speed and risk getting an error. There are options for two APIs, but only Google API was used.</p>
+
+<p>The dictionaries are saved into a <code class="highlighter-rouge">pickle</code> file as soon as the function finishes. My Mac is overworked from my Masters and things crash without warning all the time. So leaving the dictionaries containing our precious queries lying there over lunch, let alone overnight, is not a good idea.</p>
+
+<p>The columns can then be filled with the remaining functions once all locations that can be geocoded has been geocoded.</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="k">def</span> <span class="nf">geocode</span><span class="p">(</span>
+    <span class="n">lat</span><span class="p">,</span>
+    <span class="nb">long</span><span class="p">,</span>
+    <span class="n">country</span><span class="p">,</span>
+    <span class="n">locations</span><span class="p">,</span>
+    <span class="n">start</span><span class="p">,</span>
+    <span class="n">end</span><span class="p">,</span>
+    <span class="n">api</span><span class="p">,</span>
+    <span class="n">apikey</span><span class="p">):</span>
+    <span class="kn">import</span> <span class="nn">requests</span>
+    <span class="kn">import</span> <span class="nn">time</span>
+    <span class="kn">from</span> <span class="nn">requests.packages.urllib3.exceptions</span> <span class="kn">import</span> <span class="n">InsecureRequestWarning</span>
+
+    <span class="n">requests</span><span class="o">.</span><span class="n">packages</span><span class="o">.</span><span class="n">urllib3</span><span class="o">.</span><span class="n">disable_warnings</span><span class="p">(</span><span class="n">InsecureRequestWarning</span><span class="p">)</span>
+    
+    <span class="n">baseurl</span> <span class="o">=</span> <span class="p">{</span><span class="s">"google"</span> <span class="p">:</span> <span class="s">"https://maps.googleapis.com/maps/api/geocode/json?address="</span><span class="p">,</span>
+               <span class="s">"dstk"</span> <span class="p">:</span> <span class="s">"http://maps.googleapis.com/maps/api/geocode/json?sensor=false&amp;address="</span><span class="p">}</span>
+    <span class="n">base</span> <span class="o">=</span> <span class="n">baseurl</span><span class="p">[</span><span class="n">api</span><span class="p">]</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="n">start</span><span class="p">,</span> <span class="n">end</span><span class="p">):</span>
+        <span class="k">if</span> <span class="n">locations</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="n">lat</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="n">locations</span><span class="p">[</span><span class="n">i</span><span class="p">]</span> <span class="ow">in</span> <span class="nb">long</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="k">if</span> <span class="nb">len</span><span class="p">(</span><span class="n">locations</span><span class="p">[</span><span class="n">i</span><span class="p">])</span> <span class="o">&lt;</span> <span class="mi">5</span><span class="p">:</span>
+            <span class="k">continue</span>
+        <span class="n">add</span> <span class="o">=</span> <span class="s">"+"</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">locations</span><span class="p">[</span><span class="n">i</span><span class="p">]</span><span class="o">.</span><span class="n">split</span><span class="p">(</span><span class="s">" "</span><span class="p">))</span>
+        <span class="n">url</span> <span class="o">=</span> <span class="n">base</span><span class="o">+</span><span class="n">add</span><span class="o">+</span><span class="n">apikey</span>
+        <span class="n">time</span><span class="o">.</span><span class="n">sleep</span><span class="p">(</span><span class="mf">0.2</span><span class="p">)</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">resp</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">verify</span> <span class="o">=</span> <span class="bp">False</span><span class="p">)</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{i}: error in retrieval! </span><span class="se">\n</span><span class="s"> Location: {locations[i]}.</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">lat</span><span class="p">,</span> <span class="nb">long</span><span class="p">,</span> <span class="n">country</span>
+        <span class="n">resp_json</span> <span class="o">=</span> <span class="n">resp</span><span class="o">.</span><span class="n">json</span><span class="p">()</span>
+        <span class="k">if</span> <span class="n">resp_json</span><span class="p">[</span><span class="s">"status"</span><span class="p">]</span> <span class="o">!=</span> <span class="s">"OK"</span><span class="p">:</span>
+            <span class="k">if</span> <span class="n">resp_json</span><span class="p">[</span><span class="s">"status"</span><span class="p">]</span> <span class="o">!=</span> <span class="s">"OVER_QUERY_LIMIT"</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{i}: error in response! </span><span class="se">\n</span><span class="s"> Location: {locations[i]}.</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">resp_json</span><span class="p">)</span>
+                <span class="k">continue</span>
+            <span class="k">else</span><span class="p">:</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{i}: Over query limit! </span><span class="se">\n</span><span class="s"> Location: {locations[i]}.</span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+                <span class="k">print</span><span class="p">(</span><span class="n">resp_json</span><span class="p">)</span>
+                <span class="k">return</span> <span class="n">lat</span><span class="p">,</span> <span class="nb">long</span><span class="p">,</span> <span class="n">country</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">lat</span><span class="p">[</span><span class="n">locations</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span><span class="o">=</span> <span class="n">resp_json</span><span class="p">[</span><span class="s">"results"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"geometry"</span><span class="p">][</span><span class="s">"location"</span><span class="p">][</span><span class="s">"lat"</span><span class="p">]</span>
+            <span class="nb">long</span><span class="p">[</span><span class="n">locations</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">resp_json</span><span class="p">[</span><span class="s">"results"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"geometry"</span><span class="p">][</span><span class="s">"location"</span><span class="p">][</span><span class="s">"lng"</span><span class="p">]</span>
+            <span class="c"># find country</span>
+            <span class="k">for</span> <span class="n">a</span> <span class="ow">in</span> <span class="n">resp_json</span><span class="p">[</span><span class="s">"results"</span><span class="p">][</span><span class="mi">0</span><span class="p">][</span><span class="s">"address_components"</span><span class="p">]:</span>
+                <span class="k">if</span> <span class="s">"country"</span> <span class="ow">in</span> <span class="n">a</span><span class="p">[</span><span class="s">"types"</span><span class="p">]:</span>
+                    <span class="n">country</span><span class="p">[</span><span class="n">locations</span><span class="p">[</span><span class="n">i</span><span class="p">]]</span> <span class="o">=</span> <span class="n">a</span><span class="p">[</span><span class="s">"long_name"</span><span class="p">]</span>
+                    <span class="k">break</span>
+        <span class="k">except</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{i}: error in parsing!</span><span class="se">\n</span><span class="s"> Location: {locations[i]}."</span><span class="p">)</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">resp_json</span><span class="p">)</span>
+            <span class="k">return</span> <span class="n">lat</span><span class="p">,</span> <span class="nb">long</span><span class="p">,</span> <span class="n">country</span>
+        <span class="k">if</span> <span class="n">i</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">f</span><span class="s">"{i} </span><span class="se">\n</span><span class="s"> Location: {locations[i]}, {(lat[locations[i]]), (long[locations[i]])}, {country[locations[i]]} </span><span class="se">\n</span><span class="s">"</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">lat</span><span class="p">,</span> <span class="nb">long</span><span class="p">,</span> <span class="n">country</span>
+
+<span class="k">def</span> <span class="nf">fill_col_from_dict</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">column</span><span class="p">,</span> <span class="n">dictionary</span><span class="p">):</span>
+    <span class="k">for</span> <span class="n">i</span> <span class="ow">in</span> <span class="n">data</span><span class="o">.</span><span class="n">index</span><span class="p">:</span>
+        <span class="k">try</span><span class="p">:</span>
+            <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span><span class="n">column</span><span class="p">]</span> <span class="o">=</span> <span class="n">dictionary</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s">"Location"</span><span class="p">]]</span>
+        <span class="k">except</span> <span class="nb">KeyError</span><span class="p">:</span>
+            <span class="k">print</span><span class="p">(</span><span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s">"Location"</span><span class="p">],</span>
+                  <span class="s">"long: "</span><span class="p">,</span>
+                  <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s">"city_longitude"</span><span class="p">],</span>
+                  <span class="s">"lat: "</span><span class="p">,</span>
+                  <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">i</span><span class="p">,</span> <span class="s">"city_latitude"</span><span class="p">])</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">Location</span><span class="o">.</span><span class="n">isna</span><span class="p">(),</span> <span class="p">[</span><span class="s">"city_latitude"</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="n">data</span><span class="o">.</span><span class="n">loc</span><span class="p">[</span><span class="n">data</span><span class="o">.</span><span class="n">Location</span><span class="o">.</span><span class="n">isna</span><span class="p">(),</span> <span class="p">[</span><span class="s">"city_longitude"</span><span class="p">]]</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">nan</span>
+    <span class="k">return</span> <span class="n">data</span>
+
+<span class="k">def</span> <span class="nf">fill_lat_long</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="n">lat</span><span class="p">,</span> <span class="nb">long</span><span class="p">):</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"filling latitude."</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">fill_col_from_dict</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s">"city_latitude"</span><span class="p">,</span> <span class="n">lat</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"filling longitude."</span><span class="p">)</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">fill_col_from_dict</span><span class="p">(</span><span class="n">data</span><span class="p">,</span> <span class="s">"city_longitude"</span><span class="p">,</span> <span class="nb">long</span><span class="p">)</span>
+    <span class="k">print</span><span class="p">(</span><span class="s">"done."</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">data</span></code></pre></figure>
+
+<p>After running all functions:</p>
+
+<figure class="highlight"><pre><code class="language-python" data-lang="python"><span class="o">&gt;&gt;&gt;</span> <span class="k">print</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">ufo</span><span class="o">.</span><span class="n">city_latitude</span><span class="o">.</span><span class="n">isna</span><span class="p">()),</span> <span class="s">"entries are missing in city latitude."</span><span class="p">)</span>
+<span class="mi">357</span> <span class="n">entries</span> <span class="n">are</span> <span class="n">missing</span> <span class="ow">in</span> <span class="n">city</span> <span class="n">latitude</span><span class="o">.</span>
+<span class="o">&gt;&gt;&gt;</span> <span class="k">print</span><span class="p">(</span><span class="nb">sum</span><span class="p">(</span><span class="n">ufo</span><span class="o">.</span><span class="n">city_longitude</span><span class="o">.</span><span class="n">isna</span><span class="p">()),</span> <span class="s">"entries are missing in city longitude."</span><span class="p">)</span>
+<span class="mi">357</span> <span class="n">entries</span> <span class="n">are</span> <span class="n">missing</span> <span class="ow">in</span> <span class="n">city</span> <span class="n">longitude</span><span class="o">.</span></code></pre></figure>
+
+<p>Cleaning is mostly done now, and we’ve filled in a lot of missing data. I also converted the <code class="highlighter-rouge">date_time</code> and <code class="highlighter-rouge">reported</code> columns into <code class="highlighter-rouge">datetime.date</code> formats. This is fairly easy straightforward with the <code class="highlighter-rouge">datetime</code> package.</p>
+
+<p>Next up will be some data visualization/analysis of this dataset.</p>
+
+
+</div>
+
+<div class="pagination">
+  
+    <a href="/2018-07-02/ufo2" class="left arrow">&#8592;</a>
+  
+  
+    <a href="/2018-05-03/scifi3" class="right arrow">&#8594;</a>
+  
+
+  <a href="#" class="top">Top</a>
+</div>
+
+    </main>
+
+    <footer>
+      <span>
+        &copy; <time datetime="2018-07-03 03:51:08 -0400">2018</time> Suan Chin Yeo. Made with Jekyll using the <a href="https://github.com/chesterhow/tale/">Tale</a> theme. Icons made by <a href="https://www.flaticon.com/authors/smashicons" title="Smashicons">Smashicons</a> from <a href="https://www.flaticon.com/" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0" target="_blank">CC 3.0 BY</a>
+      </span>
+    </footer>
+  </body>
+</html>
